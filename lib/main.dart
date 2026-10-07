@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'welcome_screen.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
 import 'dashboard_screen.dart';
 import 'connect_account_screen.dart';
 import 'upload_statement_screen.dart';
-import 'profile_settings_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,11 +27,9 @@ class PayLensApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Montserrat',
-
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF2222C8),
         ),
-
         scaffoldBackgroundColor:
         const Color(0xFFF7F7FB),
       ),
@@ -51,25 +49,17 @@ class PayLensApp extends StatelessWidget {
         '/dashboard': (context) =>
         const DashboardScreen(
           payments: [],
+          pdfFileName: '',
           pdfText: '',
-          pdfFileName: '', userName: '', userEmail: '',
+          userName: '',
+          userEmail: '',
         ),
 
-        '/connect-account': (context) {
-          return const Scaffold(
-            body: Center(
-              child: Text(
-                'Please access Connect Account from Signup.',
-              ),
-            ),
-          );
-        },
+        '/connect-account': (context) =>
+        const ConnectAccountScreen(),
 
         '/upload-statement': (context) =>
         const UploadStatementScreen(),
-
-        '/profile': (context) =>
-        const ProfileSettingsScreen(userName: '', userEmail: '',),
       },
     );
   }

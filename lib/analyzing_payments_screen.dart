@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import 'dashboard_screen.dart';
@@ -18,7 +21,8 @@ class BankTransaction {
   });
 }
 
-class AnalyzingPaymentsScreen extends StatefulWidget {
+class AnalyzingPaymentsScreen
+    extends StatefulWidget {
   final XFile file;
 
   const AnalyzingPaymentsScreen({
@@ -27,15 +31,21 @@ class AnalyzingPaymentsScreen extends StatefulWidget {
   });
 
   @override
-  State<AnalyzingPaymentsScreen> createState() =>
+  State<
+      AnalyzingPaymentsScreen>
+  createState() =>
       _AnalyzingPaymentsScreenState();
 }
 
 class _AnalyzingPaymentsScreenState
-    extends State<AnalyzingPaymentsScreen> {
-  double progress = 0.0;
-  String status = 'Preparing your statement...';
-  bool completed = false;
+    extends State<
+        AnalyzingPaymentsScreen> {
+  double progress = 0;
+
+  String status =
+      'Preparing your PDF...';
+
+  String? errorMessage;
 
   @override
   void initState() {
@@ -45,787 +55,918 @@ class _AnalyzingPaymentsScreenState
 
   Future<void> _analyzePdf() async {
     try {
-      if (!widget.file.name.toLowerCase().endsWith('.pdf')) {
-        throw Exception('Please select a PDF statement.');
+      setState(() {
+        progress = 0.15;
+        status =
+        'Reading your bank statement...';
+      });
+
+      final extension =
+          widget.file.name
+              .toLowerCase()
+              .split('.')
+              .last;
+
+      if (extension != 'pdf') {
+        throw Exception(
+          'Please upload a PDF bank statement.',
+        );
+      }
+
+      final bytes =
+      await widget.file
+          .readAsBytes();
+
+      if (bytes.isEmpty) {
+        throw Exception(
+          'The PDF file is empty or could not be read.',
+        );
       }
 
       setState(() {
-        progress = 0.15;
-        status = 'Reading your statement...';
+        progress = 0.30;
+        status =
+        'Extracting statement data...';
       });
 
-      final List<int> bytes = await widget.file.readAsBytes();
-
-      setState(() {
-        progress = 0.35;
-        status = 'Extracting transaction data...';
-      });
-
-      final PdfDocument document = PdfDocument(
+      final document =
+      PdfDocument(
         inputBytes: bytes,
       );
 
-      final PdfTextExtractor extractor =
-      PdfTextExtractor(document);
+      String extractedText = '';
 
-      final String extractedText =
-      extractor.extractText();
+      try {
+        extractedText =
+            PdfTextExtractor(
+              document,
+            ).extractText();
+      } finally {
+        document.dispose();
+      }
 
-      document.dispose();
+      if (extractedText
+          .trim()
+          .isEmpty) {
+        throw Exception(
+          'No readable text was found in this PDF.',
+        );
+      }
 
       setState(() {
-        progress = 0.60;
-        status = 'Analyzing transactions...';
+        progress = 0.55;
+        status =
+        'Finding transactions...';
       });
 
-      final List<BankTransaction> allTransactions =
-      _parseBankStatement(extractedText);
+      final transactions =
+      _parseBankStatement(
+        extractedText,
+      );
+
+      if (transactions.isEmpty) {
+        throw Exception(
+          'No transactions could be detected from this PDF.',
+        );
+      }
 
       setState(() {
-        progress = 0.80;
-        status = 'Finding subscriptions...';
+        progress = 0.70;
+        status =
+        'Detecting subscriptions...';
       });
 
-      final List<BankTransaction> subscriptions =
-      _findSubscriptions(allTransactions);
+      final subscriptions =
+      _findSubscriptions(
+        transactions,
+      );
+
+      setState(() {
+        progress = 0.82;
+        status =
+        'Saving transaction history...';
+      });
+
+      // =========================================
+      // CURRENT ACCOUNT
+      // =========================================
+
+      final prefs =
+      await SharedPreferences
+          .getInstance();
+
+      final email =
+          prefs.getString(
+            'paylens_user_email',
+          ) ??
+              '';
+
+      final userName =
+          prefs.getString(
+            'paylens_user_name',
+          ) ??
+              '';
+
+      final historyKey =
+          'paylens_statement_history_'
+          '${email.toLowerCase().trim()}';
+
+      // =========================================
+      // GET OLD HISTORY
+      // =========================================
+
+      List<dynamic> history = [];
+
+      final oldHistory =
+      prefs.getString(
+        historyKey,
+      );
+
+      if (oldHistory != null &&
+          oldHistory.isNotEmpty) {
+        try {
+          final decoded =
+          jsonDecode(
+            oldHistory,
+          );
+
+          if (decoded is List) {
+            history =
+            List<dynamic>.from(
+              decoded,
+            );
+          }
+        } catch (_) {
+          history = [];
+        }
+      }
+
+      // =========================================
+      // SAVE THIS DOCUMENT
+      // =========================================
+
+      final historyItem = {
+        'fileName':
+        widget.file.name,
+
+        'uploadedAt':
+        DateTime.now()
+            .toIso8601String(),
+
+        'transactions':
+        transactions.map(
+              (item) {
+            return {
+              'date':
+              item.date,
+              'description':
+              item.description,
+              'amount':
+              item.amount,
+              'isCredit':
+              item.isCredit,
+            };
+          },
+        ).toList(),
+      };
+
+      // VERY IMPORTANT:
+      // DO NOT REPLACE OLD FILES.
+      // ADD NEW FILE AT TOP.
+      history.insert(
+        0,
+        historyItem,
+      );
+
+      await prefs.setString(
+        historyKey,
+        jsonEncode(history),
+      );
 
       setState(() {
         progress = 1.0;
-        status = 'Analysis complete';
-        completed = true;
+        status =
+        'Analysis complete';
       });
 
       await Future.delayed(
-        const Duration(milliseconds: 500),
+        const Duration(
+          milliseconds: 500,
+        ),
       );
 
       if (!mounted) return;
 
+      // =========================================
+      // BACK TO DASHBOARD
+      // =========================================
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => DashboardScreen(
-            payments: subscriptions,
-            pdfFileName: widget.file.name,
-            pdfText: extractedText, userName: '', userEmail: '',
-          ),
+          builder: (_) =>
+              DashboardScreen(
+                payments:
+                subscriptions,
+                pdfFileName:
+                widget.file.name,
+                pdfText:
+                extractedText,
+                userName:
+                userName,
+                userEmail:
+                email,
+              ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
-        status = 'Unable to analyze this statement';
-      });
+        progress = 0;
+        status =
+        'Analysis failed';
 
-      await Future.delayed(
-        const Duration(milliseconds: 300),
+        errorMessage =
+            e.toString().replaceFirst(
+              'Exception: ',
+              '',
+            );
+      });
+    }
+  }
+
+  // =============================================
+  // TRANSACTION PARSER
+  // =============================================
+
+  List<BankTransaction>
+  _parseBankStatement(
+      String text,
+      ) {
+    final lines = text
+        .replaceAll(
+      '\r\n',
+      '\n',
+    )
+        .replaceAll(
+      '\r',
+      '\n',
+    )
+        .replaceAll(
+      '\u00A0',
+      ' ',
+    )
+        .split('\n')
+        .map(
+          (line) => line
+          .replaceAll(
+        RegExp(
+          r'\s+',
+        ),
+        ' ',
+      )
+          .trim(),
+    )
+        .where(
+          (line) =>
+      line.isNotEmpty,
+    )
+        .toList();
+
+    final transactions =
+    <BankTransaction>[];
+
+    for (
+    int i = 0;
+    i < lines.length;
+    i++
+    ) {
+      final dateMatch =
+      _findDate(
+        lines[i],
       );
 
-      if (!mounted) return;
+      if (dateMatch == null) {
+        continue;
+      }
 
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Analysis failed'),
-          content: Text(
-            'We could not read this PDF statement.\n\n$e',
+      final date =
+      dateMatch.group(0)!;
+
+      String block =
+      lines[i];
+
+      for (
+      int j = 1;
+      j <= 3 &&
+          i + j <
+              lines.length;
+      j++
+      ) {
+        final next =
+        lines[i + j];
+
+        if (_findDate(next) !=
+            null ||
+            _looksLikeMetadata(
+              next,
+            )) {
+          break;
+        }
+
+        block =
+        '$block $next';
+      }
+
+      if (_looksLikeMetadata(
+        block,
+      )) {
+        continue;
+      }
+
+      final amounts =
+      _extractAmounts(
+        block,
+      );
+
+      final amount =
+      _chooseAmount(
+        block,
+        amounts,
+      );
+
+      if (amount == null ||
+          amount <= 0) {
+        continue;
+      }
+
+      final description =
+      _cleanDescription(
+        block,
+        date,
+      );
+
+      if (description
+          .trim()
+          .isEmpty) {
+        continue;
+      }
+
+      transactions.add(
+        BankTransaction(
+          date: date,
+          description:
+          description,
+          amount: amount,
+          isCredit:
+          _detectCredit(
+            block,
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: const Text('OK'),
-            ),
-          ],
         ),
       );
     }
-  }
 
-  // ------------------------------------------------------------
-  // DATE DETECTION
-  // ------------------------------------------------------------
-
-  List<RegExpMatch> _findDates(String text) {
-    final List<RegExp> patterns = [
-      RegExp(
-        r'\b\d{1,2}[-/.](?:\d{1,2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[-/.]\d{2,4}\b',
-        caseSensitive: false,
-      ),
-
-      RegExp(
-        r'\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{2,4}\b',
-        caseSensitive: false,
-      ),
-
-      RegExp(
-        r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{2,4}\b',
-        caseSensitive: false,
-      ),
-    ];
-
-    final List<RegExpMatch> matches = [];
-
-    for (final pattern in patterns) {
-      matches.addAll(pattern.allMatches(text));
-    }
-
-    matches.sort(
-          (a, b) => a.start.compareTo(b.start),
-    );
-
-    return matches;
-  }
-
-  bool _containsTransactionDate(String line) {
-    return _findDates(line).isNotEmpty;
-  }
-
-  // ------------------------------------------------------------
-  // STATEMENT PARSER
-  // ------------------------------------------------------------
-
-  List<BankTransaction> _parseBankStatement(
-      String rawText,
-      ) {
-    if (rawText.trim().isEmpty) {
-      return [];
-    }
-
-    final List<String> lines = rawText
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n')
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList();
-
-    final List<List<String>> blocks = [];
-
-    List<String>? currentBlock;
-
-    for (final line in lines) {
-      if (_containsTransactionDate(line)) {
-        if (currentBlock != null &&
-            currentBlock.isNotEmpty) {
-          blocks.add(currentBlock);
-        }
-
-        currentBlock = [line];
-      } else {
-        if (currentBlock != null) {
-          currentBlock.add(line);
-        }
-      }
-    }
-
-    if (currentBlock != null &&
-        currentBlock.isNotEmpty) {
-      blocks.add(currentBlock);
-    }
-
-    final List<BankTransaction> transactions = [];
-
-    for (final block in blocks) {
-      final BankTransaction? transaction =
-      _parseTransactionBlock(block);
-
-      if (transaction != null) {
-        transactions.add(transaction);
-      }
-    }
-
-    return _removeDuplicateTransactions(
+    return _removeDuplicates(
       transactions,
     );
   }
 
-  // ------------------------------------------------------------
-  // TRANSACTION BLOCK
-  // ------------------------------------------------------------
+  // =============================================
+  // SUBSCRIPTIONS
+  // =============================================
 
-  BankTransaction? _parseTransactionBlock(
-      List<String> block,
+  List<BankTransaction>
+  _findSubscriptions(
+      List<BankTransaction>
+      transactions,
       ) {
-    if (block.isEmpty) return null;
-
-    final String originalBlock =
-    block.join(' ').replaceAll(RegExp(r'\s+'), ' ').trim();
-
-    final String lower =
-    originalBlock.toLowerCase();
-
-    // Ignore non-transaction sections.
-    if (_isNonTransactionText(lower)) {
-      return null;
-    }
-
-    final List<RegExpMatch> dates =
-    _findDates(originalBlock);
-
-    if (dates.isEmpty) {
-      return null;
-    }
-
-    // If the block contains multiple dates, it is usually
-    // a statement period / summary / header rather than
-    // one transaction.
-    if (dates.length > 1) {
-      return null;
-    }
-
-    final String date = dates.first.group(0)!;
-
-    // Remove the date before extracting amounts.
-    //
-    // This is very important because otherwise:
-    //
-    // 02-Sep-2026 Netflix Subscription 649.00
-    //
-    // can be interpreted as:
-    //
-    // 02 + 2026 + 649
-    //
-    // and the parser may choose the wrong number.
-    String withoutDate = originalBlock.replaceFirst(
-      dates.first.group(0)!,
-      ' ',
-    );
-
-    withoutDate = withoutDate
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-
-    final List<double> amounts =
-    _extractMoneyAmounts(withoutDate);
-
-    if (amounts.isEmpty) {
-      return null;
-    }
-
-    final double amount =
-    _chooseTransactionAmount(
-      withoutDate,
-      amounts,
-    );
-
-    if (amount <= 0) {
-      return null;
-    }
-
-    String description =
-    _cleanDescription(withoutDate);
-
-    if (description.isEmpty) {
-      return null;
-    }
-
-    if (_looksLikeHeader(description)) {
-      return null;
-    }
-
-    final bool isCredit =
-    _isCreditTransaction(lower);
-
-    return BankTransaction(
-      date: date,
-      description: description,
-      amount: amount,
-      isCredit: isCredit,
-    );
-  }
-
-  // ------------------------------------------------------------
-  // IGNORE HEADERS / NON TRANSACTION TEXT
-  // ------------------------------------------------------------
-
-  bool _isNonTransactionText(String text) {
-    const ignored = [
-      'statement period',
-      'statement date',
-      'generated on',
-      'account summary',
-      'account details',
-      'opening balance',
-      'closing balance',
-      'available balance',
-      'transaction history',
-      'transaction summary',
-      'subscription transactions',
-      'monthly subscription summary',
-      'yearly subscription summary',
-      'date description debit credit balance',
-      'date description amount balance',
-      'currency inr',
-      'currency',
-      'page number',
-    ];
-
-    for (final word in ignored) {
-      if (text.contains(word)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  bool _looksLikeHeader(String description) {
-    final text = description.toLowerCase();
-
-    const headerWords = [
-      'date',
-      'description',
-      'debit',
-      'credit',
-      'balance',
-      'transaction',
-      'transactions',
-      'currency',
-      'statement',
-      'summary',
-    ];
-
-    int matches = 0;
-
-    for (final word in headerWords) {
-      if (text.contains(word)) {
-        matches++;
-      }
-    }
-
-    return matches >= 2;
-  }
-
-  // ------------------------------------------------------------
-  // MONEY EXTRACTION
-  // ------------------------------------------------------------
-
-  List<double> _extractMoneyAmounts(
-      String text,
-      ) {
-    final RegExp amountRegex = RegExp(
-      r'(?:(?:₹|Rs\.?|INR|USD|\$|EUR|€|GBP|£)\s*)?'
-      r'[-+]?\(?'
-      r'(?:\d{1,3}(?:,\d{3})+|\d+)'
-      r'(?:\.\d{1,2})?'
-      r'\)?',
-      caseSensitive: false,
-    );
-
-    final List<double> amounts = [];
-
-    for (final match in amountRegex.allMatches(text)) {
-      final String raw =
-      match.group(0)!.trim();
-
-      final String cleaned = raw
-          .replaceAll(
-        RegExp(
-          r'[₹$€£A-Za-z()]',
-          caseSensitive: false,
-        ),
-        '',
-      )
-          .replaceAll(',', '')
-          .trim();
-
-      final double? value =
-      double.tryParse(cleaned);
-
-      if (value == null) continue;
-
-      // Ignore tiny standalone numbers that are usually
-      // part of descriptions, reference numbers, etc.
-      final bool hasDecimal =
-      cleaned.contains('.');
-
-      final bool hasCurrency =
-      RegExp(
-        r'[₹$€£]|Rs|INR|USD|EUR|GBP',
-        caseSensitive: false,
-      ).hasMatch(raw);
-
-      if (!hasDecimal &&
-          !hasCurrency &&
-          value < 10) {
-        continue;
-      }
-
-      // Ignore obvious years.
-      if (value >= 1900 && value <= 2100) {
-        continue;
-      }
-
-      amounts.add(value.abs());
-    }
-
-    return amounts;
-  }
-
-  // ------------------------------------------------------------
-  // CHOOSE THE REAL TRANSACTION AMOUNT
-  // ------------------------------------------------------------
-
-  double _chooseTransactionAmount(
-      String text,
-      List<double> amounts,
-      ) {
-    if (amounts.isEmpty) return 0;
-
-    final String lower =
-    text.toLowerCase();
-
-    // Most bank statement rows are:
-    //
-    // description | debit/credit | balance
-    //
-    // Therefore the first amount is normally the
-    // transaction amount and the last amount is
-    // the running balance.
-
-    if (amounts.length >= 2) {
-      if (lower.contains('balance')) {
-        return amounts.first;
-      }
-
-      if (lower.contains('debit') ||
-          lower.contains('credit') ||
-          lower.contains('withdraw') ||
-          lower.contains('payment') ||
-          lower.contains('purchase') ||
-          lower.contains('subscription') ||
-          lower.contains('membership') ||
-          lower.contains('premium') ||
-          lower.contains('autopay') ||
-          lower.contains('auto pay')) {
-        return amounts.first;
-      }
-
-      // Generic table layout:
-      // first number = transaction
-      // second number = balance
-      return amounts.first;
-    }
-
-    return amounts.first;
-  }
-
-  // ------------------------------------------------------------
-  // DESCRIPTION CLEANING
-  // ------------------------------------------------------------
-
-  String _cleanDescription(
-      String text,
-      ) {
-    String result = text;
-
-    // Remove monetary values.
-    result = result.replaceAll(
-      RegExp(
-        r'(?:(?:₹|Rs\.?|INR|USD|\$|EUR|€|GBP|£)\s*)?'
-        r'[-+]?\(?'
-        r'(?:\d{1,3}(?:,\d{3})+|\d+)'
-        r'(?:\.\d{1,2})?'
-        r'\)?',
-        caseSensitive: false,
-      ),
-      ' ',
-    );
-
-    // Remove transaction column words.
-    result = result.replaceAll(
-      RegExp(
-        r'\b(?:DR|CR|DEBIT|CREDIT)\b',
-        caseSensitive: false,
-      ),
-      ' ',
-    );
-
-    // Remove balance-related words.
-    result = result.replaceAll(
-      RegExp(
-        r'\b(?:balance|running balance|available balance)\b',
-        caseSensitive: false,
-      ),
-      ' ',
-    );
-
-    // Remove common reference labels.
-    result = result.replaceAll(
-      RegExp(
-        r'\b(?:ref|reference|ref no|reference no|transaction id|txn id|utr)\b[:#\-\s]*[A-Za-z0-9\-_]+',
-        caseSensitive: false,
-      ),
-      ' ',
-    );
-
-    // Remove long transaction/reference numbers.
-    result = result.replaceAll(
-      RegExp(r'\b\d{6,}\b'),
-      ' ',
-    );
-
-    result = result
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-
-    // Remove leading/trailing separators.
-    result = result
-        .replaceAll(RegExp(r'^[|:\-–—]+'), '')
-        .replaceAll(RegExp(r'[|:\-–—]+$'), '')
-        .trim();
-
-    return result;
-  }
-
-  // ------------------------------------------------------------
-  // CREDIT / DEBIT
-  // ------------------------------------------------------------
-
-  bool _isCreditTransaction(
-      String text,
-      ) {
-    final lower = text.toLowerCase();
-
-    if (lower.contains('credit')) return true;
-    if (lower.contains('salary')) return true;
-    if (lower.contains('cashback')) return true;
-    if (lower.contains('refund')) return true;
-    if (lower.contains('deposit')) return true;
-    if (lower.contains('interest')) return true;
-
-    return false;
-  }
-
-  // ------------------------------------------------------------
-  // SUBSCRIPTION DETECTION
-  // ------------------------------------------------------------
-
-  List<BankTransaction> _findSubscriptions(
-      List<BankTransaction> transactions,
-      ) {
-    final List<BankTransaction> subscriptions = [];
-
-    for (final transaction in transactions) {
-      if (transaction.isCredit) {
-        continue;
-      }
-
-      if (_looksLikeSubscription(
-        transaction.description,
-      )) {
-        subscriptions.add(transaction);
-      }
-    }
-
-    return subscriptions;
+    return transactions
+        .where(
+          (item) =>
+      !item.isCredit &&
+          _looksLikeSubscription(
+            item.description,
+          ),
+    )
+        .toList();
   }
 
   bool _looksLikeSubscription(
       String description,
       ) {
-    final String text =
+    final text =
     description.toLowerCase();
 
-    const subscriptionKeywords = [
-      // Direct subscription words
+    const keywords = [
       'subscription',
-      'subscribed',
-      'membership',
-      'recurring',
-      'recurring payment',
-      'recurring debit',
-      'autopay',
-      'auto pay',
-      'standing instruction',
-      'standing order',
-
-      // Streaming / entertainment
       'netflix',
       'spotify',
-      'youtube premium',
-      'youtube music',
       'amazon prime',
       'prime video',
+      'youtube premium',
+      'youtube music',
+      'apple music',
+      'apple tv',
+      'icloud',
+      'google one',
+      'google storage',
+      'microsoft 365',
+      'office 365',
+      'adobe',
+      'creative cloud',
+      'canva',
       'disney',
-      'disney+',
       'hotstar',
       'jiohotstar',
       'sonyliv',
       'zee5',
       'gaana',
       'wynk',
-
-      // Software / cloud
-      'adobe',
-      'creative cloud',
-      'canva',
-      'microsoft 365',
-      'office 365',
-      'google one',
-      'google storage',
-      'icloud',
-      'dropbox',
-      'notion',
-      'zoom',
-      'grammarly',
       'chatgpt',
       'openai',
-      'linkedin premium',
-
-      // Learning
-      'coursera',
-      'udemy',
-      'skillshare',
-
-      // Fitness / services
-      'gym membership',
-      'fitness membership',
-      'club membership',
-      'premium plan',
-      'pro plan',
-      'monthly plan',
-      'annual plan',
-      'yearly plan',
+      'notion',
+      'dropbox',
+      'zoom',
+      'grammarly',
+      'membership',
+      'recurring',
+      'autopay',
+      'auto pay',
+      'standing instruction',
+      'emi',
     ];
 
-    for (final keyword in subscriptionKeywords) {
-      if (text.contains(keyword)) {
-        return true;
+    return keywords.any(
+      text.contains,
+    );
+  }
+
+  // =============================================
+  // DATE
+  // =============================================
+
+  RegExpMatch? _findDate(
+      String text,
+      ) {
+    final patterns = [
+      RegExp(
+        r'\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b',
+      ),
+      RegExp(
+        r'\b\d{1,2}[-/][A-Za-z]{3,9}[-/]\d{2,4}\b',
+      ),
+      RegExp(
+        r'\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{2,4}\b',
+      ),
+      RegExp(
+        r'\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b',
+      ),
+    ];
+
+    for (final pattern
+    in patterns) {
+      final match =
+      pattern.firstMatch(
+        text,
+      );
+
+      if (match != null) {
+        return match;
       }
     }
 
-    return false;
+    return null;
   }
 
-  // ------------------------------------------------------------
-  // DUPLICATE REMOVAL
-  // ------------------------------------------------------------
+  // =============================================
+  // AMOUNT
+  // =============================================
 
-  List<BankTransaction> _removeDuplicateTransactions(
-      List<BankTransaction> transactions,
+  List<double> _extractAmounts(
+      String text,
       ) {
-    final Map<String, BankTransaction> unique = {};
+    final result =
+    <double>[];
 
-    for (final transaction in transactions) {
-      final key =
-          '${transaction.date}|'
-          '${transaction.description.toLowerCase()}|'
-          '${transaction.amount.toStringAsFixed(2)}|'
-          '${transaction.isCredit}';
+    final regex =
+    RegExp(
+      r'(?:₹|Rs\.?|INR)?\s*'
+      r'([0-9]{1,3}(?:,[0-9]{2,3})*'
+      r'(?:\.[0-9]{1,2})?|'
+      r'[0-9]+(?:\.[0-9]{1,2})?)',
+      caseSensitive: false,
+    );
 
-      unique[key] = transaction;
+    for (final match
+    in regex.allMatches(
+      text,
+    )) {
+      final value =
+      double.tryParse(
+        (match.group(1) ?? '')
+            .replaceAll(
+          ',',
+          '',
+        ),
+      );
+
+      if (value != null &&
+          value > 0) {
+        result.add(value);
+      }
     }
 
-    return unique.values.toList();
+    return result;
   }
 
-  // ------------------------------------------------------------
+  double? _chooseAmount(
+      String block,
+      List<double> amounts,
+      ) {
+    if (amounts.isEmpty) {
+      return null;
+    }
+
+    final debit =
+    RegExp(
+      r'(?:dr|debit|debited|withdrawal|withdrawn)'
+      r'[^0-9₹]{0,15}'
+      r'(?:₹|rs\.?|inr)?\s*'
+      r'([0-9,]+(?:\.[0-9]{1,2})?)',
+      caseSensitive: false,
+    ).firstMatch(block);
+
+    if (debit != null) {
+      return double.tryParse(
+        debit
+            .group(1)!
+            .replaceAll(
+          ',',
+          '',
+        ),
+      );
+    }
+
+    final credit =
+    RegExp(
+      r'(?:cr|credit|credited|deposit|received|salary|refund|cashback)'
+      r'[^0-9₹]{0,15}'
+      r'(?:₹|rs\.?|inr)?\s*'
+      r'([0-9,]+(?:\.[0-9]{1,2})?)',
+      caseSensitive: false,
+    ).firstMatch(block);
+
+    if (credit != null) {
+      return double.tryParse(
+        credit
+            .group(1)!
+            .replaceAll(
+          ',',
+          '',
+        ),
+      );
+    }
+
+    return amounts.length >= 2
+        ? amounts[
+    amounts.length - 2]
+        : amounts.first;
+  }
+
+  // =============================================
+  // CREDIT / DEBIT
+  // =============================================
+
+  bool _detectCredit(
+      String text,
+      ) {
+    final lower =
+    text.toLowerCase();
+
+    const keywords = [
+      'credit',
+      'credited',
+      'salary',
+      'deposit',
+      'refund',
+      'cashback',
+      'interest',
+      'reversal',
+      'received',
+      'neft cr',
+      'imps cr',
+      'upi cr',
+    ];
+
+    return keywords.any(
+      lower.contains,
+    );
+  }
+
+  // =============================================
+  // METADATA
+  // =============================================
+
+  bool _looksLikeMetadata(
+      String text,
+      ) {
+    final lower =
+    text.toLowerCase();
+
+    const keywords = [
+      'opening balance',
+      'closing balance',
+      'available balance',
+      'account balance',
+      'statement period',
+      'account number',
+      'account no',
+      'customer id',
+      'customer name',
+      'branch',
+      'ifsc',
+      'micr',
+      'transaction date',
+      'transaction details',
+      'transaction description',
+      'page no',
+      'page number',
+    ];
+
+    return keywords.any(
+      lower.contains,
+    );
+  }
+
+  // =============================================
+  // DESCRIPTION
+  // =============================================
+
+  String _cleanDescription(
+      String block,
+      String date,
+      ) {
+    var description =
+    block.replaceFirst(
+      date,
+      '',
+    );
+
+    description =
+        description.replaceAll(
+          RegExp(
+            r'(?:₹|Rs\.?|INR)?\s*'
+            r'[0-9]{1,3}(?:,[0-9]{2,3})*'
+            r'(?:\.[0-9]{1,2})?',
+            caseSensitive: false,
+          ),
+          ' ',
+        );
+
+    description =
+        description.replaceAll(
+          RegExp(
+            r'\b(?:DR|CR|DEBIT|CREDIT)\b',
+            caseSensitive: false,
+          ),
+          ' ',
+        );
+
+    description =
+        description
+            .replaceAll(
+          RegExp(
+            r'\s+',
+          ),
+          ' ',
+        )
+            .trim();
+
+    final lower =
+    description.toLowerCase();
+
+    const invalid = [
+      'transaction',
+      'transaction details',
+      'transaction description',
+      'description',
+      'date',
+    ];
+
+    if (invalid.contains(
+      lower,
+    )) {
+      return '';
+    }
+
+    return description;
+  }
+
+  // =============================================
+  // REMOVE DUPLICATES
+  // =============================================
+
+  List<BankTransaction>
+  _removeDuplicates(
+      List<BankTransaction>
+      input,
+      ) {
+    final map =
+    <String, BankTransaction>{};
+
+    for (final item in input) {
+      final key =
+          '${item.date}|'
+          '${item.description.toLowerCase()}|'
+          '${item.amount.toStringAsFixed(2)}|'
+          '${item.isCredit}';
+
+      map[key] = item;
+    }
+
+    return map.values.toList();
+  }
+
+  // =============================================
   // UI
-  // ------------------------------------------------------------
+  // =============================================
 
   @override
-  Widget build(BuildContext context) {
-    final int percent =
-    (progress * 100).round();
-
+  Widget build(
+      BuildContext context,
+      ) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor:
+      Colors.white,
+
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 28,
-            ),
-            child: Column(
-              mainAxisAlignment:
-              MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEDEBFF),
-                    borderRadius:
-                    BorderRadius.circular(24),
+        child: LayoutBuilder(
+          builder: (
+              context,
+              constraints,
+              ) {
+            return Padding(
+              padding:
+              const EdgeInsets
+                  .symmetric(
+                horizontal: 16,
+              ),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height:
+                    constraints
+                        .maxHeight <
+                        650
+                        ? 35
+                        : 70,
                   ),
-                  child: const Icon(
-                    Icons.analytics_rounded,
-                    color: Color(0xFF2929C9),
-                    size: 46,
-                  ),
-                ),
 
-                const SizedBox(height: 28),
-
-                const Text(
-                  'Analyzing your statement',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  status,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF777777),
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                ClipRRect(
-                  borderRadius:
-                  BorderRadius.circular(20),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 10,
-                    backgroundColor:
-                    const Color(0xFFE8E8F4),
-                    valueColor:
-                    const AlwaysStoppedAnimation<Color>(
-                      Color(0xFF2929C9),
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration:
+                    BoxDecoration(
+                      color:
+                      const Color(
+                        0xFFEDEDFF,
+                      ),
+                      borderRadius:
+                      BorderRadius
+                          .circular(
+                        20,
+                      ),
+                    ),
+                    child:
+                    const Icon(
+                      Icons
+                          .picture_as_pdf_rounded,
+                      color:
+                      Color(
+                        0xFF2222C8,
+                      ),
+                      size: 34,
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 12),
-
-                Text(
-                  '$percent%',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF2929C9),
+                  const SizedBox(
+                    height: 25,
                   ),
-                ),
 
-                const SizedBox(height: 12),
-
-                Text(
-                  widget.file.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF888888),
+                  const Text(
+                    'Analyzing your PDF',
+                    style:
+                    TextStyle(
+                      fontSize: 25,
+                      fontWeight:
+                      FontWeight
+                          .w600,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
+
+                  const SizedBox(
+                    height: 10,
+                  ),
+
+                  Text(
+                    status,
+                    textAlign:
+                    TextAlign.center,
+                    style:
+                    const TextStyle(
+                      fontSize: 14,
+                      color:
+                      Color(
+                        0xFF999999,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(
+                    height: 25,
+                  ),
+
+                  LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    backgroundColor:
+                    const Color(
+                      0xFFE5E5E5,
+                    ),
+                    valueColor:
+                    const AlwaysStoppedAnimation<
+                        Color>(
+                      Color(
+                        0xFF2222C8,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(
+                    height: 12,
+                  ),
+
+                  Text(
+                    '${(progress * 100).round()}%',
+                    style:
+                    const TextStyle(
+                      fontSize: 15,
+                      fontWeight:
+                      FontWeight
+                          .w500,
+                    ),
+                  ),
+
+                  if (errorMessage !=
+                      null) ...[
+                    const SizedBox(
+                      height: 25,
+                    ),
+
+                    Container(
+                      width:
+                      double.infinity,
+                      padding:
+                      const EdgeInsets
+                          .all(
+                        16,
+                      ),
+                      decoration:
+                      BoxDecoration(
+                        color:
+                        const Color(
+                          0xFFFFF0F0,
+                        ),
+                        borderRadius:
+                        BorderRadius
+                            .circular(
+                          12,
+                        ),
+                      ),
+                      child:
+                      Text(
+                        errorMessage!,
+                        textAlign:
+                        TextAlign
+                            .center,
+                        style:
+                        const TextStyle(
+                          color:
+                          Color(
+                            0xFFE53935,
+                          ),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const Spacer(),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'analyzing_payments_screen.dart';
-import 'subscription_screen.dart';
+import 'history_screen.dart';
 import 'profile_settings_screen.dart';
+import 'subscription_screen.dart';
+import 'upload_statement_screen.dart';
 
 const Color payLensBlue = Color(0xFF2929C9);
 
@@ -10,8 +12,6 @@ class DashboardScreen extends StatefulWidget {
   final List<BankTransaction> payments;
   final String pdfFileName;
   final String pdfText;
-
-  // Logged-in user's details.
   final String userName;
   final String userEmail;
 
@@ -29,62 +29,24 @@ class DashboardScreen extends StatefulWidget {
       _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState
+    extends State<DashboardScreen> {
   int selectedBottom = 0;
 
-  double get totalSubscriptionSpend {
-    return widget.payments.fold(
+  double get totalSpending {
+    return widget.payments
+        .where((item) => !item.isCredit)
+        .fold(
       0.0,
           (sum, item) => sum + item.amount,
     );
   }
 
-  int get subscriptionCount => widget.payments.length;
-
-  String get userInitial {
-    final name = widget.userName.trim();
-
-    if (name.isEmpty) {
-      return 'U';
-    }
-
-    return name.substring(0, 1).toUpperCase();
+  int get spendingCount {
+    return widget.payments
+        .where((item) => !item.isCredit)
+        .length;
   }
-
-  // =========================================================
-  // AUTOMATIC APP LOGO DOMAIN
-  // =========================================================
-
-  String _getServiceDomain(String name) {
-    final text = name.toLowerCase();
-
-    if (text.contains('netflix')) return 'netflix.com';
-    if (text.contains('spotify')) return 'spotify.com';
-    if (text.contains('canva')) return 'canva.com';
-    if (text.contains('amazon')) return 'amazon.com';
-    if (text.contains('youtube')) return 'youtube.com';
-    if (text.contains('google')) return 'google.com';
-    if (text.contains('microsoft')) return 'microsoft.com';
-    if (text.contains('apple')) return 'apple.com';
-    if (text.contains('adobe')) return 'adobe.com';
-    if (text.contains('prime')) return 'amazon.com';
-    if (text.contains('disney')) return 'disneyplus.com';
-    if (text.contains('hotstar')) return 'hotstar.com';
-    if (text.contains('linkedin')) return 'linkedin.com';
-    if (text.contains('zoom')) return 'zoom.us';
-    if (text.contains('dropbox')) return 'dropbox.com';
-    if (text.contains('figma')) return 'figma.com';
-    if (text.contains('notion')) return 'notion.so';
-    if (text.contains('slack')) return 'slack.com';
-    if (text.contains('chatgpt')) return 'openai.com';
-    if (text.contains('openai')) return 'openai.com';
-
-    return '';
-  }
-
-  // =========================================================
-  // OPEN SUBSCRIPTIONS
-  // =========================================================
 
   void openSubscriptions() {
     Navigator.push(
@@ -97,9 +59,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // =========================================================
-  // OPEN PROFILE
-  // =========================================================
+  void openHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const HistoryScreen(),
+      ),
+    );
+  }
 
   void openProfile() {
     Navigator.push(
@@ -108,7 +75,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (_) => ProfileSettingsScreen(
           userName: widget.userName,
           userEmail: widget.userEmail,
+          payments: widget.payments,
         ),
+      ),
+    );
+  }
+
+  void openUpload() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+        const UploadStatementScreen(),
       ),
     );
   }
@@ -124,24 +102,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             return Column(
               children: [
+                // ======================================================
+                // MAIN CONTENT
+                // ======================================================
+
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
+                    padding:
+                    const EdgeInsets.symmetric(
+                      horizontal: 8,
                     ),
                     child: Column(
                       children: [
-                        // =========================
+                        // ==================================================
                         // HEADER
-                        // =========================
+                        // ==================================================
 
                         SizedBox(
-                          height: compact ? 54 : 62,
+                          height: compact ? 50 : 60,
                           child: Row(
                             children: [
                               SizedBox(
-                                width: compact ? 30 : 34,
-                                height: compact ? 30 : 34,
+                                width: compact ? 29 : 32,
+                                height: compact ? 29 : 32,
                                 child: Image.asset(
                                   'assets/paylens_logo.png',
                                   fit: BoxFit.contain,
@@ -166,16 +149,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       text: 'Pay',
                                       style: TextStyle(
                                         color: Colors.black,
-                                        fontSize: compact ? 22 : 25,
-                                        fontWeight: FontWeight.w600,
+                                        fontSize:
+                                        compact ? 22 : 25,
+                                        fontWeight:
+                                        FontWeight.w600,
                                       ),
                                     ),
                                     TextSpan(
                                       text: 'Lens',
                                       style: TextStyle(
                                         color: payLensBlue,
-                                        fontSize: compact ? 22 : 25,
-                                        fontWeight: FontWeight.w600,
+                                        fontSize:
+                                        compact ? 22 : 25,
+                                        fontWeight:
+                                        FontWeight.w600,
                                       ),
                                     ),
                                   ],
@@ -184,29 +171,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                               const Spacer(),
 
-                              // =========================
-                              // USER INITIAL
-                              // =========================
-
                               GestureDetector(
-                                behavior: HitTestBehavior.opaque,
                                 onTap: openProfile,
                                 child: Container(
                                   width: compact ? 38 : 42,
                                   height: compact ? 38 : 42,
-                                  decoration: const BoxDecoration(
+                                  decoration:
+                                  const BoxDecoration(
                                     color: Color(0xFFEDEDFF),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      userInitial,
-                                      style: TextStyle(
-                                        color: payLensBlue,
-                                        fontSize: compact ? 16 : 18,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                  child: const Icon(
+                                    Icons
+                                        .person_outline_rounded,
+                                    color: payLensBlue,
+                                    size: 21,
                                   ),
                                 ),
                               ),
@@ -214,58 +193,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
 
-                        // =========================
-                        // SUBSCRIPTION SUMMARY
-                        // =========================
+                        // ==================================================
+                        // TOTAL SPENDING
+                        // ==================================================
 
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                          padding:
+                          const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color: payLensBlue,
-                            borderRadius: BorderRadius.circular(17),
+                            borderRadius:
+                            BorderRadius.circular(17),
                           ),
                           child: Row(
                             children: [
                               Expanded(
                                 child: Column(
-                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisSize:
+                                  MainAxisSize.min,
                                   crossAxisAlignment:
                                   CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Your subscription spend',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                      'Total spending',
                                       style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-
-                                    const SizedBox(height: 3),
-
-                                    Text(
-                                      '₹${totalSubscriptionSpend.toStringAsFixed(2)}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
                                       ),
                                     ),
 
                                     const SizedBox(height: 2),
 
                                     Text(
-                                      '$subscriptionCount subscription'
-                                          '${subscriptionCount == 1 ? '' : 's'} detected',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                      '₹${totalSpending.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight:
+                                        FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 2),
+
+                                    Text(
+                                      '$spendingCount payments',
                                       style: const TextStyle(
                                         color: Colors.white70,
                                         fontSize: 10,
@@ -275,19 +251,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ),
 
-                              const SizedBox(width: 12),
-
                               Container(
-                                width: 44,
-                                height: 44,
+                                width: 42,
+                                height: 42,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(
-                                    alpha: 0.15,
-                                  ),
+                                  color: Colors.white
+                                      .withValues(alpha: 0.15),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Icons.subscriptions_rounded,
+                                  Icons.bar_chart_rounded,
                                   color: Colors.white,
                                   size: 25,
                                 ),
@@ -296,37 +269,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
 
-                        // =========================
-                        // ANALYZED PDF
-                        // =========================
+                        // ==================================================
+                        // PDF FILE NAME
+                        // ==================================================
 
                         if (widget.pdfFileName.isNotEmpty)
                           SizedBox(
-                            height: 26,
+                            height: 19,
                             child: Align(
-                              alignment: Alignment.centerLeft,
+                              alignment:
+                              Alignment.centerLeft,
                               child: Text(
-                                'Analyzed: ${widget.pdfFileName}',
+                                widget.pdfFileName,
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                overflow:
+                                TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  color: Color(0xFF888888),
+                                  color:
+                                  Color(0xFF999999),
                                   fontSize: 9,
                                 ),
                               ),
                             ),
                           ),
 
-                        // =========================
-                        // SUBSCRIPTIONS TITLE
-                        // =========================
+                        // ==================================================
+                        // TRANSACTIONS HEADER
+                        // ==================================================
 
                         SizedBox(
-                          height: compact ? 34 : 38,
+                          height: compact ? 29 : 32,
                           child: Row(
                             children: [
                               const Icon(
-                                Icons.subscriptions_rounded,
+                                Icons.receipt_long_rounded,
                                 color: payLensBlue,
                                 size: 21,
                               ),
@@ -334,32 +310,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const SizedBox(width: 7),
 
                               const Text(
-                                'Subscriptions',
+                                'Transactions',
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontSize: 19,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight:
+                                  FontWeight.w600,
                                 ),
                               ),
 
                               const SizedBox(width: 7),
 
                               Container(
-                                padding: const EdgeInsets.symmetric(
+                                padding:
+                                const EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEDEEFF),
+                                  color:
+                                  const Color(
+                                    0xFFEDEEFF,
+                                  ),
                                   borderRadius:
-                                  BorderRadius.circular(20),
+                                  BorderRadius.circular(
+                                    20,
+                                  ),
                                 ),
                                 child: Text(
-                                  '$subscriptionCount',
-                                  style: const TextStyle(
+                                  '${widget.payments.length}',
+                                  style:
+                                  const TextStyle(
                                     color: payLensBlue,
                                     fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight:
+                                    FontWeight.w600,
                                   ),
                                 ),
                               ),
@@ -367,14 +352,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
 
-                        // =========================
-                        // SUBSCRIPTIONS
-                        // =========================
+                        // ==================================================
+                        // TRANSACTIONS
+                        // ==================================================
 
                         Expanded(
                           child: LayoutBuilder(
-                            builder: (context, box) {
-                              return _subscriptionSection(
+                            builder: (
+                                context,
+                                box,
+                                ) {
+                              return _transactionSection(
                                 box.maxHeight,
                               );
                             },
@@ -385,43 +373,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
 
-                // =========================
-                // BOTTOM NAVIGATION
-                // =========================
+                // ======================================================
+                // BOTTOM BAR + PLUS BUTTON
+                // ======================================================
 
-                Container(
-                  height: 50,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      top: BorderSide(
-                        color: Color(0xFFE2E2E2),
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceAround,
+                SizedBox(
+                  height: 72,
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      _bottomItem(
-                        Icons.home_rounded,
-                        'Home',
-                        0,
+                      // ==================================================
+                      // BOTTOM NAVIGATION BAR
+                      // ==================================================
+
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          height: 58,
+                          decoration:
+                          const BoxDecoration(
+                            color: Colors.white,
+                            border: Border(
+                              top: BorderSide(
+                                color:
+                                Color(0xFFE0E0E0),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment
+                                .spaceAround,
+                            children: [
+                              _bottomItem(
+                                Icons.home_rounded,
+                                'Home',
+                                0,
+                              ),
+                              _bottomItem(
+                                Icons
+                                    .subscriptions_rounded,
+                                'Subscriptions',
+                                1,
+                              ),
+                              _bottomItem(
+                                Icons.history_rounded,
+                                'History',
+                                2,
+                              ),
+                              _bottomItem(
+                                Icons
+                                    .person_outline_rounded,
+                                'Profile',
+                                3,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      _bottomItem(
-                        Icons.subscriptions_rounded,
-                        'Subscriptions',
-                        1,
-                      ),
-                      _bottomItem(
-                        Icons.history_rounded,
-                        'History',
-                        2,
-                      ),
-                      _bottomItem(
-                        Icons.person_outline_rounded,
-                        'Profile',
-                        3,
+
+                      // ==================================================
+                      // PLUS BUTTON
+                      //
+                      // IMPORTANT:
+                      // bottom bar top = 14
+                      // circle height = 56
+                      // top = -14
+                      //
+                      // So circle center sits EXACTLY on
+                      // the top border of bottom bar.
+                      // ==================================================
+
+                      Positioned(
+                        right: 12,
+                        top: -45,
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          padding:
+                          const EdgeInsets.all(3),
+                          decoration:
+                          const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Container(
+                            decoration:
+                            const BoxDecoration(
+                              color: payLensBlue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              onPressed: openUpload,
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 31,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -434,51 +489,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // =========================================================
-  // SUBSCRIPTION SECTION
-  // =========================================================
+  // ================================================================
+  // TRANSACTION SECTION
+  // ================================================================
 
-  Widget _subscriptionSection(double availableHeight) {
+  Widget _transactionSection(
+      double availableHeight,
+      ) {
     if (widget.payments.isEmpty) {
       return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.subscriptions_outlined,
-              color: Color(0xFF999999),
-              size: 42,
-            ),
-
-            SizedBox(height: 8),
-
-            Text(
-              'No subscriptions found',
-              style: TextStyle(
-                color: Color(0xFF777777),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-
-            SizedBox(height: 3),
-
-            Text(
-              'No subscription payments were detected in this statement.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF999999),
-                fontSize: 10,
-              ),
-            ),
-          ],
+        child: Text(
+          'No transactions detected',
+          style: TextStyle(
+            color: Color(0xFF888888),
+            fontSize: 14,
+          ),
         ),
       );
     }
 
-    const cardHeight = 58.0;
-    const cardGap = 5.0;
-    const moreHeight = 24.0;
+    const cardHeight = 54.0;
+    const cardGap = 4.0;
+    const moreHeight = 22.0;
 
     int possibleCards =
     ((availableHeight - moreHeight) /
@@ -493,9 +525,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       possibleCards = widget.payments.length;
     }
 
-    final visible = widget.payments
-        .take(possibleCards)
-        .toList();
+    final visible =
+    widget.payments.take(possibleCards).toList();
 
     final remaining =
         widget.payments.length - visible.length;
@@ -503,7 +534,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         ...visible.map(
-              (item) => _subscriptionCard(
+              (item) => _transactionCard(
             item,
             cardHeight,
           ),
@@ -515,15 +546,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SizedBox(
             height: moreHeight,
             child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
               onTap: openSubscriptions,
               child: Center(
                 child: Text(
-                  '+$remaining more subscriptions',
+                  '+$remaining more',
                   style: const TextStyle(
                     color: payLensBlue,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight:
+                    FontWeight.w600,
                   ),
                 ),
               ),
@@ -533,117 +564,162 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // =========================================================
-  // SUBSCRIPTION CARD
-  // =========================================================
+  // ================================================================
+  // CLEAN TRANSACTION NAME
+  //
+  // Removes:
+  // Currency
+  // INR
+  // Rs
+  // ₹
+  //
+  // So:
+  // "September Currency INR (n) Subscription Transactions"
+  //
+  // becomes:
+  // "September Subscription Transactions"
+  // ================================================================
 
-  Widget _subscriptionCard(
-      BankTransaction subscription,
+  String _cleanTransactionName(
+      String value,
+      ) {
+    String text = value;
+
+    text = text.replaceAll(
+      RegExp(
+        r'\bCurrency\b',
+        caseSensitive: false,
+      ),
+      '',
+    );
+
+    text = text.replaceAll(
+      RegExp(
+        r'\bINR\b',
+        caseSensitive: false,
+      ),
+      '',
+    );
+
+    text = text.replaceAll(
+      RegExp(
+        r'\bRs\.?\b',
+        caseSensitive: false,
+      ),
+      '',
+    );
+
+    text = text.replaceAll('₹', '');
+
+    text = text.replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
+
+    return text.trim();
+  }
+
+  // ================================================================
+  // TRANSACTION CARD
+  // ================================================================
+
+  Widget _transactionCard(
+      BankTransaction transaction,
       double height,
       ) {
-    final domain = _getServiceDomain(
-      subscription.description,
+    final cleanName =
+    _cleanTransactionName(
+      transaction.description,
     );
 
     return Container(
       width: double.infinity,
       height: height,
-      margin: const EdgeInsets.only(bottom: 5),
-      padding: const EdgeInsets.symmetric(
+      margin:
+      const EdgeInsets.only(
+        bottom: 5,
+      ),
+      padding:
+      const EdgeInsets.symmetric(
         horizontal: 10,
       ),
-      decoration: BoxDecoration(
+      decoration:
+      BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius:
+        BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFE0E2EA),
+          color:
+          const Color(0xFFE0E2EA),
         ),
       ),
       child: Row(
         children: [
-          // =========================
-          // APP LOGO
-          // =========================
-
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEEEEFF),
-              shape: BoxShape.circle,
+            decoration:
+            const BoxDecoration(
+              color:
+              Color(0xFFEEEEFF),
+              shape:
+              BoxShape.circle,
             ),
-            padding: const EdgeInsets.all(7),
-            child: domain.isEmpty
-                ? const Icon(
-              Icons.subscriptions_rounded,
-              color: payLensBlue,
+            child: Icon(
+              _transactionIcon(
+                cleanName,
+              ),
+              color:
+              payLensBlue,
               size: 20,
-            )
-                : Image.network(
-              'https://www.google.com/s2/favicons?domain=$domain&sz=128',
-              fit: BoxFit.contain,
-              errorBuilder:
-                  (context, error, stackTrace) {
-                return const Icon(
-                  Icons.subscriptions_rounded,
-                  color: payLensBlue,
-                  size: 20,
-                );
-              },
             ),
           ),
 
-          const SizedBox(width: 10),
-
-          // =========================
-          // SUBSCRIPTION DETAILS
-          // =========================
+          const SizedBox(
+            width: 10,
+          ),
 
           Expanded(
             child: Column(
               mainAxisAlignment:
-              MainAxisAlignment.center,
+              MainAxisAlignment
+                  .center,
               crossAxisAlignment:
-              CrossAxisAlignment.start,
+              CrossAxisAlignment
+                  .start,
               children: [
                 Text(
-                  subscription.description,
+                  cleanName.isEmpty
+                      ? 'Transaction'
+                      : cleanName,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.black,
+                  overflow:
+                  TextOverflow
+                      .ellipsis,
+                  style:
+                  const TextStyle(
+                    color:
+                    Colors.black,
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontWeight:
+                    FontWeight.w600,
                   ),
                 ),
 
-                const SizedBox(height: 2),
+                const SizedBox(
+                  height: 2,
+                ),
 
                 Text(
-                  'Detected from ${subscription.date}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF999999),
+                  transaction.date,
+                  style:
+                  const TextStyle(
+                    color:
+                    Color(0xFF999999),
                     fontSize: 10,
                   ),
                 ),
               ],
-            ),
-          ),
-
-          const SizedBox(width: 6),
-
-          // =========================
-          // AMOUNT
-          // =========================
-
-          Text(
-            '₹${subscription.amount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -651,16 +727,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // =========================================================
-  // BOTTOM NAVIGATION
-  // =========================================================
+  IconData _transactionIcon(
+      String description,
+      ) {
+    final text =
+    description.toLowerCase();
+
+    if (text.contains('netflix') ||
+        text.contains('spotify') ||
+        text.contains('subscription')) {
+      return Icons
+          .subscriptions_rounded;
+    }
+
+    if (text.contains('amazon') ||
+        text.contains('purchase')) {
+      return Icons
+          .shopping_bag_rounded;
+    }
+
+    if (text.contains('grocery')) {
+      return Icons
+          .shopping_cart_rounded;
+    }
+
+    if (text.contains('electricity')) {
+      return Icons.bolt_rounded;
+    }
+
+    if (text.contains('mobile') ||
+        text.contains('phone')) {
+      return Icons
+          .phone_android_rounded;
+    }
+
+    if (text.contains('upi') ||
+        text.contains('transfer') ||
+        text.contains('neft') ||
+        text.contains('imps')) {
+      return Icons
+          .swap_horiz_rounded;
+    }
+
+    if (text.contains('atm') ||
+        text.contains('withdrawal')) {
+      return Icons.local_atm_rounded;
+    }
+
+    return Icons.payments_rounded;
+  }
+
+  // ================================================================
+  // BOTTOM NAV ITEM
+  // ================================================================
 
   Widget _bottomItem(
       IconData icon,
       String label,
       int index,
       ) {
-    final selected = selectedBottom == index;
+    final selected =
+        selectedBottom == index;
 
     return GestureDetector(
       onTap: () {
@@ -670,6 +797,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
 
           openSubscriptions();
+          return;
+        }
+
+        if (index == 2) {
+          setState(() {
+            selectedBottom = 2;
+          });
+
+          openHistory();
           return;
         }
 
@@ -683,22 +819,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
 
         setState(() {
-          selectedBottom = index;
+          selectedBottom = 0;
         });
       },
       child: SizedBox(
-        width: 80,
-        height: 50,
+        width: 78,
+        height: 58,
         child: Column(
           mainAxisAlignment:
           MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 20,
+              size: 23,
               color: selected
                   ? payLensBlue
-                  : const Color(0xFF999999),
+                  : const Color(
+                0xFF999999,
+              ),
             ),
 
             const SizedBox(height: 1),
@@ -709,7 +847,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontSize: 9,
                 color: selected
                     ? payLensBlue
-                    : const Color(0xFF999999),
+                    : const Color(
+                  0xFF999999,
+                ),
               ),
             ),
           ],
