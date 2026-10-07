@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:project/subscription_screen.dart';
 
 import 'dashboard_screen.dart';
 import 'upload_statement_screen.dart';
@@ -51,10 +52,6 @@ class ProfileSettingsScreen extends StatelessWidget {
   // SETTINGS ROW
   // ============================================================
 
-  // ============================================================
-// SETTINGS ROW
-// ============================================================
-
   Widget settingsRow({
     required IconData icon,
     required String title,
@@ -85,7 +82,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontFamily: 'Montserrat',
-                  fontSize: 16, // reduced from 20
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: CupertinoColors.black,
                   decoration: TextDecoration.none,
@@ -135,21 +132,18 @@ class ProfileSettingsScreen extends StatelessWidget {
   // ============================================================
 
   Widget profileCard() {
-    final String profileLetter = userName.trim().isNotEmpty
+    final String profileLetter =
+    userName.trim().isNotEmpty
         ? userName.trim()[0].toUpperCase()
         : '?';
 
     return Container(
       width: double.infinity,
-
-      // Increased to prevent bottom overflow
       height: 88,
-
       padding: const EdgeInsets.symmetric(
         horizontal: 10,
         vertical: 8,
       ),
-
       decoration: BoxDecoration(
         color: CupertinoColors.white,
         border: Border.all(
@@ -158,7 +152,6 @@ class ProfileSettingsScreen extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(6),
       ),
-
       child: Row(
         children: [
           // ======================================================
@@ -199,7 +192,9 @@ class ProfileSettingsScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  userName.trim().isEmpty ? 'User' : userName,
+                  userName.trim().isEmpty
+                      ? 'User'
+                      : userName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -264,10 +259,6 @@ class ProfileSettingsScreen extends StatelessWidget {
   // SIGN OUT
   // ============================================================
 
-  // ============================================================
-// SIGN OUT
-// ============================================================
-
   Widget signOutButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
@@ -298,7 +289,7 @@ class ProfileSettingsScreen extends StatelessWidget {
               'Sign Out',
               style: TextStyle(
                 fontFamily: 'Montserrat',
-                fontSize: 20, // increased from 18
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFFD13F3F),
                 decoration: TextDecoration.none,
@@ -334,7 +325,8 @@ class ProfileSettingsScreen extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const UploadStatementScreen(),
+        builder: (context) =>
+        const UploadStatementScreen(),
       ),
     );
   }
@@ -369,6 +361,85 @@ class ProfileSettingsScreen extends StatelessWidget {
   }
 
   // ============================================================
+  // SUBSCRIPTION INSIGHTS
+  // ============================================================
+
+  void openIssues(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text('Issues'),
+          content: const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Subscription issues and unusual subscription activity will appear here.',
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void openReview(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text('Review'),
+          content: const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Subscriptions that need your review will appear here.',
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void openUpcoming(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text('Upcoming'),
+          content: const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Upcoming subscription payments will appear here.',
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================================
   // BOTTOM NAVIGATION
   // ============================================================
 
@@ -385,7 +456,8 @@ class ProfileSettingsScreen extends StatelessWidget {
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment:
+        MainAxisAlignment.spaceAround,
         children: [
           // HOME
           CupertinoButton(
@@ -395,7 +467,7 @@ class ProfileSettingsScreen extends StatelessWidget {
             },
             child: const Icon(
               CupertinoIcons.home,
-              size: 15,
+              size: 20,
               color: Color(0xFF777777),
             ),
           ),
@@ -404,11 +476,19 @@ class ProfileSettingsScreen extends StatelessWidget {
           CupertinoButton(
             padding: EdgeInsets.zero,
             onPressed: () {
-              openUpload(context);
+              // Open subscriptions
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SubscriptionScreen(
+                    payments: const [],
+                  ),
+                ),
+              );
             },
             child: const Icon(
-              CupertinoIcons.square_grid_2x2,
-              size: 15,
+              CupertinoIcons.rectangle_stack,
+              size: 20,
               color: Color(0xFF777777),
             ),
           ),
@@ -421,7 +501,7 @@ class ProfileSettingsScreen extends StatelessWidget {
             },
             child: const Icon(
               CupertinoIcons.clock,
-              size: 15,
+              size: 20,
               color: Color(0xFF777777),
             ),
           ),
@@ -432,7 +512,7 @@ class ProfileSettingsScreen extends StatelessWidget {
             onPressed: () {},
             child: const Icon(
               CupertinoIcons.person,
-              size: 15,
+              size: 20,
               color: primaryBlue,
             ),
           ),
@@ -449,7 +529,6 @@ class ProfileSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       backgroundColor: pageBackground,
-
       child: SafeArea(
         child: Column(
           children: [
@@ -459,9 +538,9 @@ class ProfileSettingsScreen extends StatelessWidget {
                   horizontal: 31,
                   vertical: 17,
                 ),
-
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
                   children: [
                     // ==================================================
                     // PAGE TITLE
@@ -471,10 +550,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                       'Profile & Settings',
                       style: TextStyle(
                         fontFamily: 'Montserrat',
-
-                        // Increased from 16
                         fontSize: 18,
-
                         fontWeight: FontWeight.w600,
                         color: CupertinoColors.black,
                         decoration: TextDecoration.none,
@@ -499,10 +575,6 @@ class ProfileSettingsScreen extends StatelessWidget {
 
                     settingsCard(
                       children: [
-                        // -------------------------------
-                        // NOTIFICATIONS
-                        // -------------------------------
-
                         settingsRow(
                           icon: CupertinoIcons.bell,
                           title: 'Notifications',
@@ -517,10 +589,6 @@ class ProfileSettingsScreen extends StatelessWidget {
                           },
                         ),
 
-                        // -------------------------------
-                        // PAYMENT METHODS
-                        // -------------------------------
-
                         settingsRow(
                           icon: CupertinoIcons.creditcard,
                           title: 'Payment Methods',
@@ -529,7 +597,9 @@ class ProfileSettingsScreen extends StatelessWidget {
                               context: context,
                               builder: (context) {
                                 return const CupertinoAlertDialog(
-                                  title: Text('Payment Methods'),
+                                  title: Text(
+                                    'Payment Methods',
+                                  ),
                                   content: Text(
                                     'This feature will be available soon.',
                                   ),
@@ -540,10 +610,6 @@ class ProfileSettingsScreen extends StatelessWidget {
                           },
                         ),
 
-                        // -------------------------------
-                        // AUDIT PREFERENCES
-                        // -------------------------------
-
                         settingsRow(
                           icon: CupertinoIcons.settings,
                           title: 'Audit Preferences',
@@ -552,7 +618,9 @@ class ProfileSettingsScreen extends StatelessWidget {
                               context: context,
                               builder: (context) {
                                 return const CupertinoAlertDialog(
-                                  title: Text('Audit Preferences'),
+                                  title: Text(
+                                    'Audit Preferences',
+                                  ),
                                   content: Text(
                                     'Audit preferences will be available soon.',
                                   ),
@@ -575,19 +643,18 @@ class ProfileSettingsScreen extends StatelessWidget {
 
                     settingsCard(
                       children: [
-                        // -------------------------------
-                        // PRIVACY & SECURITY
-                        // -------------------------------
-
                         settingsRow(
-                          icon: CupertinoIcons.lock_shield,
+                          icon:
+                          CupertinoIcons.lock_shield,
                           title: 'Privacy & Security',
                           onTap: () {
                             showCupertinoDialog(
                               context: context,
                               builder: (context) {
                                 return const CupertinoAlertDialog(
-                                  title: Text('Privacy & Security'),
+                                  title: Text(
+                                    'Privacy & Security',
+                                  ),
                                   content: Text(
                                     'Your PayLens data is protected.',
                                   ),
@@ -598,10 +665,6 @@ class ProfileSettingsScreen extends StatelessWidget {
                           },
                         ),
 
-                        // -------------------------------
-                        // DATA PERMISSIONS
-                        // -------------------------------
-
                         settingsRow(
                           icon: CupertinoIcons.lock,
                           title: 'Data Permissions',
@@ -610,7 +673,9 @@ class ProfileSettingsScreen extends StatelessWidget {
                               context: context,
                               builder: (context) {
                                 return const CupertinoAlertDialog(
-                                  title: Text('Data Permissions'),
+                                  title: Text(
+                                    'Data Permissions',
+                                  ),
                                   content: Text(
                                     'Data permission settings will be available soon.',
                                   ),
@@ -626,6 +691,57 @@ class ProfileSettingsScreen extends StatelessWidget {
                     const SizedBox(height: 14),
 
                     // ==================================================
+                    // SUBSCRIPTION INSIGHTS
+                    // ==================================================
+
+                    sectionTitle('Subscription Insights'),
+
+                    settingsCard(
+                      children: [
+                        // -------------------------------
+                        // ISSUES
+                        // -------------------------------
+
+                        settingsRow(
+                          icon:
+                          CupertinoIcons.exclamationmark_triangle,
+                          title: 'Issues',
+                          onTap: () {
+                            openIssues(context);
+                          },
+                        ),
+
+                        // -------------------------------
+                        // REVIEW
+                        // -------------------------------
+
+                        settingsRow(
+                          icon:
+                          CupertinoIcons.doc_text_search,
+                          title: 'Review',
+                          onTap: () {
+                            openReview(context);
+                          },
+                        ),
+
+                        // -------------------------------
+                        // UPCOMING
+                        // -------------------------------
+
+                        settingsRow(
+                          icon:
+                          CupertinoIcons.calendar,
+                          title: 'Upcoming',
+                          onTap: () {
+                            openUpcoming(context);
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // ==================================================
                     // SUPPORT
                     // ==================================================
 
@@ -633,19 +749,18 @@ class ProfileSettingsScreen extends StatelessWidget {
 
                     settingsCard(
                       children: [
-                        // -------------------------------
-                        // HELP & SUPPORT
-                        // -------------------------------
-
                         settingsRow(
-                          icon: CupertinoIcons.question_circle,
+                          icon:
+                          CupertinoIcons.question_circle,
                           title: 'Help & Support',
                           onTap: () {
                             showCupertinoDialog(
                               context: context,
                               builder: (context) {
                                 return const CupertinoAlertDialog(
-                                  title: Text('Help & Support'),
+                                  title: Text(
+                                    'Help & Support',
+                                  ),
                                   content: Text(
                                     'PayLens support will be available soon.',
                                   ),
@@ -656,19 +771,18 @@ class ProfileSettingsScreen extends StatelessWidget {
                           },
                         ),
 
-                        // -------------------------------
-                        // CONTACT PAYLENS
-                        // -------------------------------
-
                         settingsRow(
-                          icon: CupertinoIcons.chat_bubble,
+                          icon:
+                          CupertinoIcons.chat_bubble,
                           title: 'Contact PayLens',
                           onTap: () {
                             showCupertinoDialog(
                               context: context,
                               builder: (context) {
                                 return const CupertinoAlertDialog(
-                                  title: Text('Contact PayLens'),
+                                  title: Text(
+                                    'Contact PayLens',
+                                  ),
                                   content: Text(
                                     'Thank you for contacting PayLens.',
                                   ),

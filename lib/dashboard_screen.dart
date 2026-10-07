@@ -29,8 +29,7 @@ class DashboardScreen extends StatefulWidget {
       _DashboardScreenState();
 }
 
-class _DashboardScreenState
-    extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> {
   int selectedBottom = 0;
 
   double get totalSubscriptionSpend {
@@ -40,8 +39,7 @@ class _DashboardScreenState
     );
   }
 
-  int get subscriptionCount =>
-      widget.payments.length;
+  int get subscriptionCount => widget.payments.length;
 
   String get userInitial {
     final name = widget.userName.trim();
@@ -53,6 +51,41 @@ class _DashboardScreenState
     return name.substring(0, 1).toUpperCase();
   }
 
+  // =========================================================
+  // AUTOMATIC APP LOGO DOMAIN
+  // =========================================================
+
+  String _getServiceDomain(String name) {
+    final text = name.toLowerCase();
+
+    if (text.contains('netflix')) return 'netflix.com';
+    if (text.contains('spotify')) return 'spotify.com';
+    if (text.contains('canva')) return 'canva.com';
+    if (text.contains('amazon')) return 'amazon.com';
+    if (text.contains('youtube')) return 'youtube.com';
+    if (text.contains('google')) return 'google.com';
+    if (text.contains('microsoft')) return 'microsoft.com';
+    if (text.contains('apple')) return 'apple.com';
+    if (text.contains('adobe')) return 'adobe.com';
+    if (text.contains('prime')) return 'amazon.com';
+    if (text.contains('disney')) return 'disneyplus.com';
+    if (text.contains('hotstar')) return 'hotstar.com';
+    if (text.contains('linkedin')) return 'linkedin.com';
+    if (text.contains('zoom')) return 'zoom.us';
+    if (text.contains('dropbox')) return 'dropbox.com';
+    if (text.contains('figma')) return 'figma.com';
+    if (text.contains('notion')) return 'notion.so';
+    if (text.contains('slack')) return 'slack.com';
+    if (text.contains('chatgpt')) return 'openai.com';
+    if (text.contains('openai')) return 'openai.com';
+
+    return '';
+  }
+
+  // =========================================================
+  // OPEN SUBSCRIPTIONS
+  // =========================================================
+
   void openSubscriptions() {
     Navigator.push(
       context,
@@ -63,6 +96,10 @@ class _DashboardScreenState
       ),
     );
   }
+
+  // =========================================================
+  // OPEN PROFILE
+  // =========================================================
 
   void openProfile() {
     Navigator.push(
@@ -129,20 +166,16 @@ class _DashboardScreenState
                                       text: 'Pay',
                                       style: TextStyle(
                                         color: Colors.black,
-                                        fontSize:
-                                        compact ? 22 : 25,
-                                        fontWeight:
-                                        FontWeight.w600,
+                                        fontSize: compact ? 22 : 25,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                     TextSpan(
                                       text: 'Lens',
                                       style: TextStyle(
                                         color: payLensBlue,
-                                        fontSize:
-                                        compact ? 22 : 25,
-                                        fontWeight:
-                                        FontWeight.w600,
+                                        fontSize: compact ? 22 : 25,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ],
@@ -156,33 +189,22 @@ class _DashboardScreenState
                               // =========================
 
                               GestureDetector(
-                                behavior:
-                                HitTestBehavior.opaque,
+                                behavior: HitTestBehavior.opaque,
                                 onTap: openProfile,
                                 child: Container(
-                                  width:
-                                  compact ? 38 : 42,
-                                  height:
-                                  compact ? 38 : 42,
-                                  decoration:
-                                  const BoxDecoration(
-                                    color:
-                                    Color(0xFFEDEDFF),
+                                  width: compact ? 38 : 42,
+                                  height: compact ? 38 : 42,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFEDEDFF),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Center(
                                     child: Text(
                                       userInitial,
-                                      style:
-                                      TextStyle(
-                                        color:
-                                        payLensBlue,
-                                        fontSize:
-                                        compact
-                                            ? 16
-                                            : 18,
-                                        fontWeight:
-                                        FontWeight.w700,
+                                      style: TextStyle(
+                                        color: payLensBlue,
+                                        fontSize: compact ? 16 : 18,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),
@@ -198,73 +220,54 @@ class _DashboardScreenState
 
                         Container(
                           width: double.infinity,
-                          padding:
-                          const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(
                             color: payLensBlue,
-                            borderRadius:
-                            BorderRadius.circular(17),
+                            borderRadius: BorderRadius.circular(17),
                           ),
                           child: Row(
                             children: [
                               Expanded(
                                 child: Column(
-                                  mainAxisSize:
-                                  MainAxisSize.min,
+                                  mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment:
                                   CrossAxisAlignment.start,
                                   children: [
                                     const Text(
                                       'Your subscription spend',
                                       maxLines: 1,
-                                      overflow:
-                                      TextOverflow
-                                          .ellipsis,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        color:
-                                        Colors.white70,
+                                        color: Colors.white70,
                                         fontSize: 12,
                                       ),
                                     ),
 
-                                    const SizedBox(
-                                      height: 3,
-                                    ),
+                                    const SizedBox(height: 3),
 
                                     Text(
                                       '₹${totalSubscriptionSpend.toStringAsFixed(2)}',
                                       maxLines: 1,
-                                      overflow:
-                                      TextOverflow
-                                          .ellipsis,
-                                      style:
-                                      const TextStyle(
-                                        color:
-                                        Colors.white,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                         fontSize: 26,
-                                        fontWeight:
-                                        FontWeight.w700,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
 
-                                    const SizedBox(
-                                      height: 2,
-                                    ),
+                                    const SizedBox(height: 2),
 
                                     Text(
                                       '$subscriptionCount subscription'
                                           '${subscriptionCount == 1 ? '' : 's'} detected',
                                       maxLines: 1,
-                                      overflow:
-                                      TextOverflow
-                                          .ellipsis,
-                                      style:
-                                      const TextStyle(
-                                        color:
-                                        Colors.white70,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
                                         fontSize: 10,
                                       ),
                                     ),
@@ -277,17 +280,14 @@ class _DashboardScreenState
                               Container(
                                 width: 44,
                                 height: 44,
-                                decoration:
-                                BoxDecoration(
-                                  color: Colors.white
-                                      .withValues(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(
                                     alpha: 0.15,
                                   ),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Icons
-                                      .subscriptions_rounded,
+                                  Icons.subscriptions_rounded,
                                   color: Colors.white,
                                   size: 25,
                                 ),
@@ -304,16 +304,13 @@ class _DashboardScreenState
                           SizedBox(
                             height: 26,
                             child: Align(
-                              alignment:
-                              Alignment.centerLeft,
+                              alignment: Alignment.centerLeft,
                               child: Text(
                                 'Analyzed: ${widget.pdfFileName}',
                                 maxLines: 1,
-                                overflow:
-                                TextOverflow.ellipsis,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  color:
-                                  Color(0xFF888888),
+                                  color: Color(0xFF888888),
                                   fontSize: 9,
                                 ),
                               ),
@@ -329,8 +326,7 @@ class _DashboardScreenState
                           child: Row(
                             children: [
                               const Icon(
-                                Icons
-                                    .subscriptions_rounded,
+                                Icons.subscriptions_rounded,
                                 color: payLensBlue,
                                 size: 21,
                               ),
@@ -342,39 +338,28 @@ class _DashboardScreenState
                                 style: TextStyle(
                                   color: Colors.black,
                                   fontSize: 19,
-                                  fontWeight:
-                                  FontWeight.w600,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
 
                               const SizedBox(width: 7),
 
                               Container(
-                                padding:
-                                const EdgeInsets
-                                    .symmetric(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 3,
                                 ),
-                                decoration:
-                                BoxDecoration(
-                                  color:
-                                  const Color(
-                                    0xFFEDEEFF,
-                                  ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEDEEFF),
                                   borderRadius:
-                                  BorderRadius
-                                      .circular(20),
+                                  BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   '$subscriptionCount',
-                                  style:
-                                  const TextStyle(
-                                    color:
-                                    payLensBlue,
+                                  style: const TextStyle(
+                                    color: payLensBlue,
                                     fontSize: 10,
-                                    fontWeight:
-                                    FontWeight.w600,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
@@ -388,8 +373,7 @@ class _DashboardScreenState
 
                         Expanded(
                           child: LayoutBuilder(
-                            builder:
-                                (context, box) {
+                            builder: (context, box) {
                               return _subscriptionSection(
                                 box.maxHeight,
                               );
@@ -407,20 +391,17 @@ class _DashboardScreenState
 
                 Container(
                   height: 50,
-                  decoration:
-                  const BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     border: Border(
                       top: BorderSide(
-                        color:
-                        Color(0xFFE2E2E2),
+                        color: Color(0xFFE2E2E2),
                       ),
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment:
-                    MainAxisAlignment
-                        .spaceAround,
+                    MainAxisAlignment.spaceAround,
                     children: [
                       _bottomItem(
                         Icons.home_rounded,
@@ -428,8 +409,7 @@ class _DashboardScreenState
                         0,
                       ),
                       _bottomItem(
-                        Icons
-                            .subscriptions_rounded,
+                        Icons.subscriptions_rounded,
                         'Subscriptions',
                         1,
                       ),
@@ -439,8 +419,7 @@ class _DashboardScreenState
                         2,
                       ),
                       _bottomItem(
-                        Icons
-                            .person_outline_rounded,
+                        Icons.person_outline_rounded,
                         'Profile',
                         3,
                       ),
@@ -459,9 +438,7 @@ class _DashboardScreenState
   // SUBSCRIPTION SECTION
   // =========================================================
 
-  Widget _subscriptionSection(
-      double availableHeight,
-      ) {
+  Widget _subscriptionSection(double availableHeight) {
     if (widget.payments.isEmpty) {
       return const Center(
         child: Column(
@@ -512,20 +489,16 @@ class _DashboardScreenState
       possibleCards = 1;
     }
 
-    if (possibleCards >
-        widget.payments.length) {
-      possibleCards =
-          widget.payments.length;
+    if (possibleCards > widget.payments.length) {
+      possibleCards = widget.payments.length;
     }
 
-    final visible =
-    widget.payments
+    final visible = widget.payments
         .take(possibleCards)
         .toList();
 
     final remaining =
-        widget.payments.length -
-            visible.length;
+        widget.payments.length - visible.length;
 
     return Column(
       children: [
@@ -542,8 +515,7 @@ class _DashboardScreenState
           SizedBox(
             height: moreHeight,
             child: GestureDetector(
-              behavior:
-              HitTestBehavior.opaque,
+              behavior: HitTestBehavior.opaque,
               onTap: openSubscriptions,
               child: Center(
                 child: Text(
@@ -551,8 +523,7 @@ class _DashboardScreenState
                   style: const TextStyle(
                     color: payLensBlue,
                     fontSize: 12,
-                    fontWeight:
-                    FontWeight.w600,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -570,41 +541,63 @@ class _DashboardScreenState
       BankTransaction subscription,
       double height,
       ) {
+    final domain = _getServiceDomain(
+      subscription.description,
+    );
+
     return Container(
       width: double.infinity,
       height: height,
-      margin:
-      const EdgeInsets.only(bottom: 5),
-      padding:
-      const EdgeInsets.symmetric(
+      margin: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.symmetric(
         horizontal: 10,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius:
-        BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: const Color(0xFFE0E2EA),
         ),
       ),
       child: Row(
         children: [
+          // =========================
+          // APP LOGO
+          // =========================
+
           Container(
             width: 40,
             height: 40,
-            decoration:
-            const BoxDecoration(
+            decoration: const BoxDecoration(
               color: Color(0xFFEEEEFF),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            padding: const EdgeInsets.all(7),
+            child: domain.isEmpty
+                ? const Icon(
               Icons.subscriptions_rounded,
               color: payLensBlue,
               size: 20,
+            )
+                : Image.network(
+              'https://www.google.com/s2/favicons?domain=$domain&sz=128',
+              fit: BoxFit.contain,
+              errorBuilder:
+                  (context, error, stackTrace) {
+                return const Icon(
+                  Icons.subscriptions_rounded,
+                  color: payLensBlue,
+                  size: 20,
+                );
+              },
             ),
           ),
 
           const SizedBox(width: 10),
+
+          // =========================
+          // SUBSCRIPTION DETAILS
+          // =========================
 
           Expanded(
             child: Column(
@@ -616,13 +609,11 @@ class _DashboardScreenState
                 Text(
                   subscription.description,
                   maxLines: 1,
-                  overflow:
-                  TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.black,
                     fontSize: 13,
-                    fontWeight:
-                    FontWeight.w600,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
 
@@ -631,8 +622,7 @@ class _DashboardScreenState
                 Text(
                   'Detected from ${subscription.date}',
                   maxLines: 1,
-                  overflow:
-                  TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF999999),
                     fontSize: 10,
@@ -644,13 +634,16 @@ class _DashboardScreenState
 
           const SizedBox(width: 6),
 
+          // =========================
+          // AMOUNT
+          // =========================
+
           Text(
             '₹${subscription.amount.toStringAsFixed(2)}',
             style: const TextStyle(
               color: Colors.black,
               fontSize: 12,
-              fontWeight:
-              FontWeight.w700,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -667,8 +660,7 @@ class _DashboardScreenState
       String label,
       int index,
       ) {
-    final selected =
-        selectedBottom == index;
+    final selected = selectedBottom == index;
 
     return GestureDetector(
       onTap: () {
