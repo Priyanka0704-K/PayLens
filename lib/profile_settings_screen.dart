@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:project/analyzing_payments_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'payment_methods_screen.dart';
-import 'audit_preferences_screen.dart';
 import 'dashboard_screen.dart';
 import 'history_screen.dart';
 import 'notifications_screen.dart';
+import 'payment_methods_screen.dart';
+import 'audit_preferences_screen.dart';
+import 'upcoming_screen.dart';
 
 class ProfileSettingsScreen extends StatelessWidget {
   final String userName;
@@ -15,17 +16,21 @@ class ProfileSettingsScreen extends StatelessWidget {
   const ProfileSettingsScreen({
     super.key,
     required this.userName,
-    required this.userEmail,
-    required List<BankTransaction> payments,
+    required this.userEmail, required List<BankTransaction> payments,
   });
 
   // ============================================================
   // PAYLENS COLORS
   // ============================================================
 
-  static const Color primaryBlue = Color(0xFF2222C8);
-  static const Color pageBackground = Color(0xFFF7F7FB);
-  static const Color borderGrey = Color(0xFFD0D0D0);
+  static const Color primaryBlue =
+  Color(0xFF2222C8);
+
+  static const Color pageBackground =
+  Color(0xFFF7F7FB);
+
+  static const Color borderGrey =
+  Color(0xFFD0D0D0);
 
   // ============================================================
   // SECTION TITLE
@@ -59,46 +64,48 @@ class ProfileSettingsScreen extends StatelessWidget {
     VoidCallback? onTap,
     bool showArrow = true,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: SizedBox(
-        height: 40,
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: [
+              const SizedBox(width: 12),
 
-            Icon(
-              icon,
-              size: 19,
-              color: Colors.black,
-            ),
+              Icon(
+                icon,
+                size: 19,
+                color: Colors.black87,
+              ),
 
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
                 ),
               ),
-            ),
 
-            if (showArrow)
-              const Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: Color(0xFF777777),
-              ),
+              if (showArrow)
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: Color(0xFF777777),
+                ),
 
-            const SizedBox(width: 11),
-          ],
+              const SizedBox(width: 9),
+            ],
+          ),
         ),
       ),
     );
@@ -119,7 +126,7 @@ class ProfileSettingsScreen extends StatelessWidget {
           color: borderGrey,
           width: 1,
         ),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(7),
       ),
       child: Column(
         children: children,
@@ -132,33 +139,38 @@ class ProfileSettingsScreen extends StatelessWidget {
   // ============================================================
 
   Widget profileCard() {
-    final profileLetter = userName.trim().isNotEmpty
+    final String profileLetter =
+    userName.trim().isNotEmpty
         ? userName.trim().substring(0, 1).toUpperCase()
         : '?';
 
     return Container(
       width: double.infinity,
-      height: 70,
+      height: 74,
       padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 7,
+        horizontal: 10,
+        vertical: 8,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(
           color: primaryBlue,
-          width: 2,
+          width: 1.5,
         ),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(7),
       ),
       child: Row(
         children: [
+          // ======================================================
+          // AVATAR
+          // ======================================================
+
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: const Color(0xFFD8D3FF),
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(7),
             ),
             child: Center(
               child: Text(
@@ -166,33 +178,41 @@ class ProfileSettingsScreen extends StatelessWidget {
                 style: const TextStyle(
                   fontFamily: 'Montserrat',
                   fontSize: 20,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                   color: primaryBlue,
                 ),
               ),
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 11),
+
+          // ======================================================
+          // USER INFO
+          // ======================================================
 
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment:
+              MainAxisAlignment.center,
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
               children: [
                 Text(
-                  userName.trim().isEmpty ? 'User' : userName,
+                  userName.trim().isEmpty
+                      ? 'User'
+                      : userName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontFamily: 'Montserrat',
                     fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
                 ),
 
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
 
                 Text(
                   userEmail,
@@ -205,21 +225,22 @@ class ProfileSettingsScreen extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
 
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 5,
-                      height: 5,
-                      decoration: const BoxDecoration(
+                      width: 6,
+                      height: 6,
+                      decoration:
+                      const BoxDecoration(
                         color: Color(0xFF39A845),
                         shape: BoxShape.circle,
                       ),
                     ),
 
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 5),
 
                     const Text(
                       'Account active',
@@ -240,16 +261,157 @@ class ProfileSettingsScreen extends StatelessWidget {
   }
 
   // ============================================================
+  // NOTIFICATIONS
+  // ============================================================
+
+  void openNotifications(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+        const NotificationsScreen(),
+      ),
+    );
+  }
+
+  // ============================================================
+  // PAYMENT METHODS
+  // ============================================================
+
+  void openPaymentMethods(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+        const PaymentMethodsScreen(),
+      ),
+    );
+  }
+
+  // ============================================================
+  // AUDIT PREFERENCES
+  // ============================================================
+
+  void openAuditPreferences(
+      BuildContext context,
+      ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+        const AuditPreferencesScreen(),
+      ),
+    );
+  }
+
+  // ============================================================
+  // UPCOMING
+  // ============================================================
+
+  void openUpcoming(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+        const UpcomingScreen(),
+      ),
+    );
+  }
+
+  // ============================================================
+  // ISSUES
+  // ============================================================
+
+  void openIssues(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+              ),
+              SizedBox(width: 8),
+              Text('Issues'),
+            ],
+          ),
+          content: const Text(
+            'PayLens will show subscription issues '
+                'and unusual recurring payment patterns here.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  color: primaryBlue,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // REVIEW
+  // ============================================================
+
+  void openReview(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(
+                Icons.star_outline_rounded,
+                color: Colors.amber,
+              ),
+              SizedBox(width: 8),
+              Text('Review'),
+            ],
+          ),
+          content: const Text(
+            'Your PayLens review option will be '
+                'available here.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  color: primaryBlue,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================================
   // SIGN OUT
   // ============================================================
 
   Widget signOutButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 38,
+      height: 42,
       child: ElevatedButton(
         onPressed: () async {
-          final prefs = await SharedPreferences.getInstance();
+          final prefs =
+          await SharedPreferences.getInstance();
 
           await prefs.setBool(
             'paylens_logged_in',
@@ -267,29 +429,33 @@ class ProfileSettingsScreen extends StatelessWidget {
           );
         },
         style: ElevatedButton.styleFrom(
+          backgroundColor:
+          const Color(0xFFF4DCDC),
+          foregroundColor:
+          const Color(0xFFD13F3F),
           elevation: 0,
-          backgroundColor: const Color(0xFFF4DCDC),
-          foregroundColor: const Color(0xFFD13F3F),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
+            borderRadius:
+            BorderRadius.circular(6),
           ),
         ),
         child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+          MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.logout,
-              size: 18,
+              Icons.logout_rounded,
+              size: 19,
               color: Color(0xFFD13F3F),
             ),
 
-            SizedBox(width: 6),
+            SizedBox(width: 7),
 
             Text(
               'Sign Out',
               style: TextStyle(
                 fontFamily: 'Montserrat',
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFFD13F3F),
               ),
@@ -317,14 +483,6 @@ class ProfileSettingsScreen extends StatelessWidget {
   }
 
   // ============================================================
-  // SUBSCRIPTIONS
-  // ============================================================
-
-  void openSubscriptions(BuildContext context) {
-    Navigator.pop(context);
-  }
-
-  // ============================================================
   // HISTORY
   // ============================================================
 
@@ -332,155 +490,9 @@ class ProfileSettingsScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const HistoryScreen(),
+        builder: (_) =>
+        const HistoryScreen(),
       ),
-    );
-  }
-
-  // ============================================================
-  // NOTIFICATIONS
-  // ============================================================
-
-  void openNotifications(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const NotificationsScreen(),
-      ),
-    );
-  }
-
-  // ============================================================
-  // PAYMENT METHODS
-  // ============================================================
-
-  void openPaymentMethods(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const PaymentMethodsScreen(),
-      ),
-    );
-  }
-
-  // ============================================================
-  // AUDIT PREFERENCES
-  // ============================================================
-
-  void openAuditPreferences(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const AuditPreferencesScreen(),
-      ),
-    );
-  }
-
-  // ============================================================
-  // INSIGHTS - ISSUES
-  // ============================================================
-
-  void openIssues(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Color(0xFFE6A700),
-              ),
-              SizedBox(width: 8),
-              Text('Issues'),
-            ],
-          ),
-          content: const Text(
-            'PayLens will show unusual, duplicate, or potentially '
-                'unnecessary recurring payments here.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ============================================================
-  // INSIGHTS - REVIEW
-  // ============================================================
-
-  void openReview(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(
-                Icons.star_rounded,
-                color: Color(0xFFE6A700),
-              ),
-              SizedBox(width: 8),
-              Text('Review'),
-            ],
-          ),
-          content: const Text(
-            'Your PayLens review and feedback options will be '
-                'available here.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ============================================================
-  // INSIGHTS - UPCOMING
-  // ============================================================
-
-  void openUpcoming(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(
-                Icons.calendar_month_rounded,
-                color: primaryBlue,
-              ),
-              SizedBox(width: 8),
-              Text('Upcoming'),
-            ],
-          ),
-          content: const Text(
-            'Upcoming subscription renewals and recurring '
-                'payments will appear here.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -488,7 +500,9 @@ class ProfileSettingsScreen extends StatelessWidget {
   // BOTTOM NAVIGATION
   // ============================================================
 
-  Widget bottomNavigation(BuildContext context) {
+  Widget bottomNavigation(
+      BuildContext context,
+      ) {
     return Container(
       height: 58,
       decoration: const BoxDecoration(
@@ -501,50 +515,66 @@ class ProfileSettingsScreen extends StatelessWidget {
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment:
+        MainAxisAlignment.spaceAround,
         children: [
+          // ======================================================
           // HOME
+          // ======================================================
+
           IconButton(
             onPressed: () {
               openHome(context);
             },
             icon: const Icon(
               Icons.home_outlined,
-              size: 23,
+              size: 24,
               color: Color(0xFF777777),
             ),
           ),
 
-          // SUBSCRIPTIONS
+          // ======================================================
+          // UPLOAD / SUBSCRIPTIONS
+          // ======================================================
+
           IconButton(
             onPressed: () {
-              openSubscriptions(context);
+              Navigator.pushNamed(
+                context,
+                '/upload-statement',
+              );
             },
             icon: const Icon(
-              Icons.view_list_outlined,
-              size: 23,
+              Icons.receipt_long_outlined,
+              size: 24,
               color: Color(0xFF777777),
             ),
           ),
 
+          // ======================================================
           // HISTORY
+          // ======================================================
+
           IconButton(
             onPressed: () {
               openHistory(context);
             },
             icon: const Icon(
-              Icons.access_time,
-              size: 23,
+              Icons.history_rounded,
+              size: 24,
               color: Color(0xFF777777),
             ),
           ),
 
-          // PROFILE
+          // ======================================================
+          // PROFILE - ACTIVE
+          // ======================================================
+
           IconButton(
             onPressed: () {},
             icon: const Icon(
-              Icons.person_outline,
-              size: 23,
+              Icons.person_outline_rounded,
+              size: 24,
               color: primaryBlue,
             ),
           ),
@@ -561,10 +591,16 @@ class ProfileSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: pageBackground,
+
+      // ========================================================
+      // BODY
+      // ========================================================
+
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxHeight < 650;
+            final bool compact =
+                constraints.maxHeight < 650;
 
             return Column(
               children: [
@@ -573,121 +609,162 @@ class ProfileSettingsScreen extends StatelessWidget {
                 // ==================================================
 
                 Expanded(
-                  child: Padding(
+                  child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 12 : 16,
-                      vertical: compact ? 8 : 10,
+                      horizontal:
+                      compact ? 12 : 16,
+                      vertical:
+                      compact ? 8 : 10,
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
                       children: [
                         // ==========================================
-                        // PAGE TITLE
+                        // TITLE
                         // ==========================================
 
                         Text(
                           'Profile & Settings',
                           style: TextStyle(
                             fontFamily: 'Montserrat',
-                            fontSize: compact ? 17 : 18,
-                            fontWeight: FontWeight.w600,
+                            fontSize:
+                            compact ? 17 : 18,
+                            fontWeight:
+                            FontWeight.w600,
                             color: Colors.black,
                           ),
                         ),
 
                         SizedBox(
-                          height: compact ? 6 : 8,
+                          height:
+                          compact ? 6 : 8,
                         ),
 
                         // ==========================================
-                        // PROFILE CARD
+                        // PROFILE
                         // ==========================================
 
                         profileCard(),
 
                         SizedBox(
-                          height: compact ? 6 : 8,
+                          height:
+                          compact ? 8 : 10,
                         ),
 
                         // ==========================================
                         // ACCOUNT
                         // ==========================================
 
-                        sectionTitle('Account'),
+                        sectionTitle(
+                          'Account',
+                        ),
 
                         settingsCard(
                           children: [
                             settingsRow(
-                              icon: Icons.notifications_none,
-                              title: 'Notifications',
+                              icon:
+                              Icons.notifications_none_rounded,
+                              title:
+                              'Notifications',
                               onTap: () {
-                                openNotifications(context);
+                                openNotifications(
+                                  context,
+                                );
                               },
                             ),
 
                             settingsRow(
-                              icon: Icons.credit_card_outlined,
-                              title: 'Payment Methods',
+                              icon:
+                              Icons.credit_card_outlined,
+                              title:
+                              'Payment Methods',
                               onTap: () {
-                                openPaymentMethods(context);
+                                openPaymentMethods(
+                                  context,
+                                );
                               },
                             ),
 
                             settingsRow(
-                              icon: Icons.settings_outlined,
-                              title: 'Audit Preferences',
+                              icon:
+                              Icons.settings_outlined,
+                              title:
+                              'Audit Preferences',
                               onTap: () {
-                                openAuditPreferences(context);
+                                openAuditPreferences(
+                                  context,
+                                );
                               },
                             ),
                           ],
                         ),
 
                         SizedBox(
-                          height: compact ? 7 : 10,
+                          height:
+                          compact ? 8 : 10,
                         ),
 
                         // ==========================================
                         // INSIGHTS
                         // ==========================================
 
-                        sectionTitle('Insights'),
+                        sectionTitle(
+                          'Insights',
+                        ),
 
                         settingsCard(
                           children: [
                             settingsRow(
-                              icon: Icons.warning_amber_outlined,
+                              icon:
+                              Icons.warning_amber_outlined,
                               title: 'Issues',
                               onTap: () {
-                                openIssues(context);
+                                openIssues(
+                                  context,
+                                );
                               },
                             ),
 
                             settingsRow(
-                              icon: Icons.star_border_rounded,
+                              icon:
+                              Icons.star_outline_rounded,
                               title: 'Review',
                               onTap: () {
-                                openReview(context);
+                                openReview(
+                                  context,
+                                );
                               },
                             ),
 
                             settingsRow(
-                              icon: Icons.calendar_month_outlined,
+                              icon:
+                              Icons.calendar_month_outlined,
                               title: 'Upcoming',
                               onTap: () {
-                                openUpcoming(context);
+                                openUpcoming(
+                                  context,
+                                );
                               },
                             ),
                           ],
                         ),
 
-                        const Spacer(),
+                        const SizedBox(
+                          height: 18,
+                        ),
 
                         // ==========================================
                         // SIGN OUT
                         // ==========================================
 
-                        signOutButton(context),
+                        signOutButton(
+                          context,
+                        ),
+
+                        const SizedBox(
+                          height: 8,
+                        ),
                       ],
                     ),
                   ),
@@ -697,7 +774,9 @@ class ProfileSettingsScreen extends StatelessWidget {
                 // BOTTOM NAVIGATION
                 // ==================================================
 
-                bottomNavigation(context),
+                bottomNavigation(
+                  context,
+                ),
               ],
             );
           },
