@@ -3,7 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import 'analyzing_payments_screen.dart';
+import 'pdf_extraction_service.dart';
+import 'pdf_payment_analyzer.dart';
+import 'paylens_insight_engine.dart';
 
 class UploadStatementScreen extends StatefulWidget {
   const UploadStatementScreen({super.key});
@@ -13,15 +17,18 @@ class UploadStatementScreen extends StatefulWidget {
       _UploadStatementScreenState();
 }
 
-class _UploadStatementScreenState extends State<UploadStatementScreen> {
+class _UploadStatementScreenState
+    extends State<UploadStatementScreen> {
   static const Color primaryBlue = Color(0xFF2222C8);
   static const Color backgroundColor = Color(0xFFF7F8FC);
 
   XFile? selectedFile;
 
-  // ------------------------------------------------------------
+  bool _isAnalyzing = false;
+
+  // ============================================================
   // PICK PDF
-  // ------------------------------------------------------------
+  // ============================================================
 
   Future<void> _pickPdf() async {
     try {
@@ -45,11 +52,44 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please select a PDF file.'),
+            content: Text(
+              'Please select a PDF file.',
+            ),
           ),
         );
 
         return;
+      }
+
+      // ----------------------------------------------------------
+      // FILE SIZE CHECK - 10 MB
+      // ----------------------------------------------------------
+
+      if (!kIsWeb) {
+        try {
+          final int size = await file.length();
+
+          const int maxSize =
+              10 * 1024 * 1024;
+
+          if (size > maxSize) {
+            if (!mounted) return;
+
+            ScaffoldMessenger.of(context)
+                .showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'PDF must be smaller than 10 MB.',
+                ),
+              ),
+            );
+
+            return;
+          }
+        } catch (_) {
+          // If file size cannot be checked,
+          // continue with the selected file.
+        }
       }
 
       setState(() {
@@ -60,22 +100,25 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Unable to select PDF: $e'),
+          content: Text(
+            'Unable to select PDF: $e',
+          ),
         ),
       );
     }
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // VIEW PDF
-  // ------------------------------------------------------------
+  // ============================================================
 
   Future<void> _viewPdf() async {
     if (selectedFile == null) return;
 
     try {
       if (kIsWeb) {
-        final Uri uri = Uri.parse(selectedFile!.path);
+        final Uri uri =
+        Uri.parse(selectedFile!.path);
 
         final bool opened = await launchUrl(
           uri,
@@ -83,64 +126,165 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
         );
 
         if (!opened && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context)
+              .showSnackBar(
             const SnackBar(
-              content: Text('Unable to open PDF in browser.'),
+              content: Text(
+                'Unable to open PDF in browser.',
+              ),
             ),
           );
         }
       } else {
-        await OpenFilex.open(selectedFile!.path);
+        await OpenFilex.open(
+          selectedFile!.path,
+        );
       }
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Unable to open PDF: $e'),
+          content: Text(
+            'Unable to open PDF: $e',
+          ),
         ),
       );
     }
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // REMOVE PDF
-  // ------------------------------------------------------------
+  // ============================================================
 
   void _removePdf() {
+    if (_isAnalyzing) {
+      return;
+    }
+
     setState(() {
       selectedFile = null;
     });
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // ANALYZE PDF
-  // ------------------------------------------------------------
+  // ============================================================
 
-  void _analyzeStatement() {
+  Future<void> _analyzeStatement() async {
     if (selectedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a PDF statement first.'),
+          content: Text(
+            'Please select a PDF statement first.',
+          ),
         ),
       );
 
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AnalyzingPaymentsScreen(
-          file: selectedFile!,
+    if (_isAnalyzing) {
+      return;
+    }
+
+    setState(() {
+      _isAnalyzing = true;
+    });
+
+    try {
+      // ========================================================
+      // STEP 1 - EXTRACT PDF TEXT
+      // ========================================================
+
+      final String extractedText =
+      await PdfExtractionService.extractText(
+        selectedFile!.path,
+      );
+
+      if (extractedText.trim().isEmpty) {
+        throw Exception(
+          'No readable transaction data was found in this PDF.',
+        );
+      }
+
+      // ========================================================
+      // STEP 2 - FIND TRANSACTIONS
+      // ========================================================
+
+      final List<PaymentTransaction>
+      transactions =
+      PdfPaymentAnalyzer.analyze(
+        extractedText,
+      );
+
+      // ========================================================
+      // STEP 3 - GENERATE PAYLENS INSIGHTS
+      // ========================================================
+
+      if (transactions.isNotEmpty) {
+        await PayLensInsightEngine
+            .analyzePayments(
+          transactions,
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      // ========================================================
+      // STEP 4 - OPEN ANALYZING SCREEN
+      // ========================================================
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              AnalyzingPaymentsScreen(
+                file: selectedFile!,
+              ),
         ),
-      ),
-    );
+      );
+
+      // ========================================================
+      // SUCCESS MESSAGE
+      // ========================================================
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            transactions.isEmpty
+                ? 'PDF processed, but no recognizable payments were found.'
+                : '${transactions.length} payment(s) detected successfully.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.redAccent,
+          content: Text(
+            'PDF analysis failed: $e',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+      }
+    }
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // PAYLENS LOGO
-  // ------------------------------------------------------------
+  // ============================================================
 
   Widget _payLensLogo() {
     return Row(
@@ -157,17 +301,21 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
               height: 30,
               decoration: BoxDecoration(
                 color: primaryBlue,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius:
+                BorderRadius.circular(8),
               ),
               child: const Icon(
-                Icons.account_balance_wallet_rounded,
+                Icons
+                    .account_balance_wallet_rounded,
                 color: Colors.white,
                 size: 18,
               ),
             );
           },
         ),
+
         const SizedBox(width: 8),
+
         RichText(
           text: const TextSpan(
             children: [
@@ -196,9 +344,9 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
     );
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // FILE READY CARD
-  // ------------------------------------------------------------
+  // ============================================================
 
   Widget _selectedPdfCard() {
     if (selectedFile == null) {
@@ -215,7 +363,8 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius:
+        BorderRadius.circular(14),
         border: Border.all(
           color: const Color(0xFFE0E0EA),
           width: 1,
@@ -244,7 +393,8 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
             ),
             decoration: BoxDecoration(
               color: const Color(0xFFF8F8FC),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius:
+              BorderRadius.circular(8),
               border: Border.all(
                 color: const Color(0xFFE5E5EF),
               ),
@@ -256,12 +406,15 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                   color: primaryBlue,
                   size: 20,
                 ),
+
                 const SizedBox(width: 9),
+
                 Expanded(
                   child: Text(
                     selectedFile!.name,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    overflow:
+                    TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Color(0xFF555555),
                       fontSize: 13,
@@ -282,7 +435,10 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                 child: SizedBox(
                   height: 34,
                   child: OutlinedButton.icon(
-                    onPressed: _viewPdf,
+                    onPressed:
+                    _isAnalyzing
+                        ? null
+                        : _viewPdf,
                     icon: const Icon(
                       Icons.visibility_outlined,
                       size: 17,
@@ -293,16 +449,22 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                       style: TextStyle(
                         color: primaryBlue,
                         fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                        fontWeight:
+                        FontWeight.w500,
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
+                    style:
+                    OutlinedButton.styleFrom(
                       side: const BorderSide(
                         color: primaryBlue,
                         width: 1,
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(7),
+                      shape:
+                      RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.circular(
+                          7,
+                        ),
                       ),
                       padding: EdgeInsets.zero,
                     ),
@@ -316,9 +478,13 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                 child: SizedBox(
                   height: 34,
                   child: OutlinedButton.icon(
-                    onPressed: _pickPdf,
+                    onPressed:
+                    _isAnalyzing
+                        ? null
+                        : _pickPdf,
                     icon: const Icon(
-                      Icons.change_circle_outlined,
+                      Icons
+                          .change_circle_outlined,
                       size: 17,
                       color: Color(0xFF666666),
                     ),
@@ -327,16 +493,22 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                       style: TextStyle(
                         color: Color(0xFF555555),
                         fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                        fontWeight:
+                        FontWeight.w500,
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
+                    style:
+                    OutlinedButton.styleFrom(
                       side: const BorderSide(
                         color: Color(0xFFD5D5D5),
                         width: 1,
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(7),
+                      shape:
+                      RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.circular(
+                          7,
+                        ),
                       ),
                       padding: EdgeInsets.zero,
                     ),
@@ -350,11 +522,16 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
 
           // REMOVE PDF
           TextButton(
-            onPressed: _removePdf,
+            onPressed:
+            _isAnalyzing
+                ? null
+                : _removePdf,
             style: TextButton.styleFrom(
-              minimumSize: const Size(0, 28),
+              minimumSize:
+              const Size(0, 28),
               padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              tapTargetSize:
+              MaterialTapTargetSize.shrinkWrap,
             ),
             child: const Text(
               'Remove PDF',
@@ -370,33 +547,38 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
     );
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // UPLOAD BOX
-  // ------------------------------------------------------------
+  // ============================================================
 
   Widget _uploadBox() {
     return GestureDetector(
-      onTap: _pickPdf,
+      onTap: _isAnalyzing
+          ? null
+          : _pickPdf,
       child: Container(
         width: double.infinity,
         height: 190,
         decoration: BoxDecoration(
           color: const Color(0xFFFCF9FF),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius:
+          BorderRadius.circular(10),
           border: Border.all(
             color: const Color(0xFF9B5CFF),
             width: 1.7,
           ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+          MainAxisAlignment.center,
           children: [
             Container(
               width: 58,
               height: 58,
               decoration: BoxDecoration(
                 color: const Color(0xFFEFE3FF),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius:
+                BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.upload_file_rounded,
@@ -441,9 +623,9 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
     );
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // LOCAL ANALYSIS CARD
-  // ------------------------------------------------------------
+  // ============================================================
 
   Widget _securityCard() {
     return Container(
@@ -454,19 +636,22 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
       ),
       decoration: BoxDecoration(
         color: const Color(0xFFF1FFF3),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius:
+        BorderRadius.circular(10),
         border: Border.all(
           color: const Color(0xFF8ED79A),
           width: 1,
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
         children: [
           Container(
             width: 32,
             height: 32,
-            decoration: const BoxDecoration(
+            decoration:
+            const BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
             ),
@@ -481,7 +666,8 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
 
           const Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
               children: [
                 Text(
                   'Analyzed locally',
@@ -491,13 +677,16 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+
                 SizedBox(height: 3),
+
                 Text(
                   'Your statement is processed locally to detect '
                       'recurring subscription patterns. Raw transaction '
                       'data is never stored or shared.',
                   maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  overflow:
+                  TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Color(0xFF4F7155),
                     fontSize: 10,
@@ -512,50 +701,82 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
     );
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // ANALYZE BUTTON
-  // ------------------------------------------------------------
+  // ============================================================
 
   Widget _analyzeButton() {
-    final bool enabled = selectedFile != null;
+    final bool enabled =
+        selectedFile != null &&
+            !_isAnalyzing;
 
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton(
-        onPressed: enabled ? _analyzeStatement : null,
+        onPressed:
+        enabled
+            ? _analyzeStatement
+            : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-          enabled ? primaryBlue : const Color(0xFFE1E1E8),
+          backgroundColor: enabled
+              ? primaryBlue
+              : const Color(0xFFE1E1E8),
           foregroundColor: Colors.white,
-          disabledForegroundColor: const Color(0xFF8B8B95),
-          disabledBackgroundColor: const Color(0xFFE1E1E8),
+          disabledForegroundColor:
+          const Color(0xFF8B8B95),
+          disabledBackgroundColor:
+          const Color(0xFFE1E1E8),
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+          shape:
+          RoundedRectangleBorder(
+            borderRadius:
+            BorderRadius.circular(8),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: _isAnalyzing
+            ? const SizedBox(
+          width: 22,
+          height: 22,
+          child:
+          CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor:
+            AlwaysStoppedAnimation<
+                Color>(
+              Colors.white,
+            ),
+          ),
+        )
+            : Row(
+          mainAxisAlignment:
+          MainAxisAlignment.center,
           children: [
             Icon(
               Icons.analytics_outlined,
               size: 20,
               color: enabled
                   ? Colors.white
-                  : const Color(0xFF8B8B95),
+                  : const Color(
+                0xFF8B8B95,
+              ),
             ),
+
             const SizedBox(width: 8),
+
             Text(
               enabled
                   ? 'Analyze Statement'
                   : 'Upload a statement to continue',
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight:
+                FontWeight.w600,
                 color: enabled
                     ? Colors.white
-                    : const Color(0xFF8B8B95),
+                    : const Color(
+                  0xFF8B8B95,
+                ),
               ),
             ),
           ],
@@ -564,26 +785,31 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
     );
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // BUILD
-  // ------------------------------------------------------------
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor:
+      backgroundColor,
       body: SafeArea(
         child: LayoutBuilder(
-          builder: (context, constraints) {
-            final bool compact = constraints.maxHeight < 650;
+          builder:
+              (context, constraints) {
+            final bool compact =
+                constraints.maxHeight < 650;
 
             return Column(
               children: [
-                // ------------------------------------------------
+                // ==================================================
                 // HEADER
-                // ------------------------------------------------
+                // ==================================================
+
                 Padding(
-                  padding: EdgeInsets.fromLTRB(
+                  padding:
+                  EdgeInsets.fromLTRB(
                     18,
                     compact ? 8 : 14,
                     18,
@@ -592,16 +818,22 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                   child: Row(
                     children: [
                       IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
+                        onPressed: _isAnalyzing
+                            ? null
+                            : () {
+                          Navigator.pop(
+                            context,
+                          );
                         },
                         padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
+                        constraints:
+                        const BoxConstraints(
                           minWidth: 34,
                           minHeight: 34,
                         ),
                         icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
+                          Icons
+                              .arrow_back_ios_new_rounded,
                           size: 18,
                           color: Colors.black87,
                         ),
@@ -610,49 +842,64 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                       const SizedBox(width: 5),
 
                       Expanded(
-                        child: _payLensLogo(),
+                        child:
+                        _payLensLogo(),
                       ),
-
                     ],
                   ),
                 ),
 
-                // ------------------------------------------------
+                // ==================================================
                 // TITLE
-                // ------------------------------------------------
+                // ==================================================
+
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding:
+                  const EdgeInsets.symmetric(
+                    horizontal: 18,
+                  ),
                   child: Column(
                     children: [
                       Text(
                         'Upload Statement',
                         style: TextStyle(
-                          fontSize: compact ? 23 : 26,
-                          fontWeight: FontWeight.w700,
+                          fontSize:
+                          compact ? 23 : 26,
+                          fontWeight:
+                          FontWeight.w700,
                           color: Colors.black,
                         ),
                       ),
+
                       const SizedBox(height: 3),
+
                       const Text(
                         'Import your bank statement to find subscriptions',
-                        textAlign: TextAlign.center,
+                        textAlign:
+                        TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF777777),
+                          color:
+                          Color(0xFF777777),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                SizedBox(height: compact ? 12 : 18),
+                SizedBox(
+                  height:
+                  compact ? 12 : 18,
+                ),
 
-                // ------------------------------------------------
+                // ==================================================
                 // MAIN CONTENT
-                // ------------------------------------------------
+                // ==================================================
+
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding:
+                    const EdgeInsets.symmetric(
                       horizontal: 18,
                     ),
                     child: Column(
@@ -660,7 +907,10 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                         // PDF SELECT / READY
                         _selectedPdfCard(),
 
-                        SizedBox(height: compact ? 10 : 14),
+                        SizedBox(
+                          height:
+                          compact ? 10 : 14,
+                        ),
 
                         // SECURITY
                         _securityCard(),
@@ -670,7 +920,10 @@ class _UploadStatementScreenState extends State<UploadStatementScreen> {
                         // ANALYZE BUTTON
                         _analyzeButton(),
 
-                        SizedBox(height: compact ? 10 : 16),
+                        SizedBox(
+                          height:
+                          compact ? 10 : 16,
+                        ),
                       ],
                     ),
                   ),
