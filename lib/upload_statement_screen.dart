@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'analyzing_payments_screen.dart';
-
 class UploadStatementScreen extends StatefulWidget {
   const UploadStatementScreen({super.key});
 
